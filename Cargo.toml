@@ -48,7 +48,7 @@ assert_approx_eq = "~1.1"
 chrono = "~0.4"
 failure = "~0.1"
 lazy_static = "~1.4"
-time = "0.2.15"
+time = "0.3.0"
 log = "~0.4"
 uuid = { version = "~0.8", features = ["v4", "serde"] }
 
