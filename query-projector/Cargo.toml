@@ -8,7 +8,7 @@ sqlcipher = ["rusqlite/sqlcipher"]
 
 [dependencies]
 failure = "~0.1"
-indexmap = "~1.7"
+indexmap = "~1.9"
 
 [dependencies.rusqlite]
 version = "~0.26"
