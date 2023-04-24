@@ -8,7 +8,7 @@ sqlcipher = ["rusqlite/sqlcipher"]
 
 [dependencies]
 failure = "~0.1"
-ordered-float = "~2.8"
+ordered-float = "~3.7"
 
 [dependencies.rusqlite]
 version = "~0.26"

@@ -14,7 +14,7 @@ indexmap = "~1.7"
 itertools = "~0.10"
 lazy_static = "~1.4"
 log = "~0.4"
-ordered-float = "~2.8"
+ordered-float = "~3.7"
 time = "~0.3"
 petgraph = "~0.6"
 serde = { version = "~1.0", optional = true }
