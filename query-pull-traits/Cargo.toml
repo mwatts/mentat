@@ -1,4 +1,5 @@
 [package]
+edition = "2021"
 name = "query_pull_traits"
 version = "0.0.2"
 workspace = ".."

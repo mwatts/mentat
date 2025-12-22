@@ -64,7 +64,7 @@ impl InputReader {
     pub fn new(interface: Option<Interface<DefaultTerminal>>) -> InputReader {
         if let Some(ref interface) = interface {
             // It's fine to fail to load history.
-            let p = ::history_file_path();
+            let p = crate::history_file_path();
             let loaded = interface.load_history(&p);
             debug!("history read from {}: {}", p.display(), loaded.is_ok());
 
@@ -97,7 +97,7 @@ impl InputReader {
         };
         let prompt = format!(
             "{blue}{prompt}{reset}",
-            blue = color::Fg(::BLUE),
+            blue = color::Fg(crate::BLUE),
             prompt = prompt,
             reset = color::Fg(color::Reset)
         );
@@ -218,7 +218,7 @@ impl InputReader {
 
     pub fn save_history(&self) {
         if let Some(ref interface) = self.interface {
-            let p = ::history_file_path();
+            let p = crate::history_file_path();
             // It's okay to fail to save history.
             let saved = interface.save_history(&p);
             debug!("history saved to {}: {}", p.display(), saved.is_ok());

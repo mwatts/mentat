@@ -1,4 +1,5 @@
 [package]
+edition = "2021"
 name = "mentat_ffi"
 version = "0.0.2"
 authors = ["Emily Toop <etoop@mozilla.com>"]

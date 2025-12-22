@@ -18,7 +18,7 @@ use tabwriter::TabWriter;
 
 use termion::{color, style};
 
-use time::{Duration, Instant};
+use std::time::{Duration, Instant};
 
 use core_traits::StructuredMap;
 
@@ -90,7 +90,7 @@ lazy_static! {
 fn eprint_out(s: &str) {
     eprint!(
         "{green}{s}{reset}",
-        green = color::Fg(::GREEN),
+        green = color::Fg(crate::GREEN),
         s = s,
         reset = color::Fg(color::Reset)
     );
@@ -106,45 +106,41 @@ fn parse_namespaced_keyword(input: &str) -> Option<Keyword> {
 }
 
 fn format_time(duration: Duration) {
-    let m_nanos = duration.whole_nanoseconds();
-    if let Some(nanos) = Some(m_nanos) {
-        if nanos < 1_000 {
-            eprintln!(
-                "{bold}{nanos}{reset}ns",
-                bold = style::Bold,
-                nanos = nanos,
-                reset = style::Reset
-            );
-            return;
-        }
+    let nanos = duration.as_nanos();
+    if nanos < 1_000 {
+        eprintln!(
+            "{bold}{nanos}{reset}ns",
+            bold = style::Bold,
+            nanos = nanos,
+            reset = style::Reset
+        );
+        return;
     }
 
-    let m_micros = duration.whole_microseconds();
-    if let Some(micros) = Some(m_micros) {
-        if micros < 1_000 {
-            eprintln!(
-                "{bold}{micros}{reset}µs",
-                bold = style::Bold,
-                micros = micros,
-                reset = style::Reset
-            );
-            return;
-        }
-
-        if micros < 1_000_000 {
-            // Print as millis.
-            let millis = (micros as f64) / 1000f64;
-            eprintln!(
-                "{bold}{millis}{reset}ms",
-                bold = style::Bold,
-                millis = millis,
-                reset = style::Reset
-            );
-            return;
-        }
+    let micros = duration.as_micros();
+    if micros < 1_000 {
+        eprintln!(
+            "{bold}{micros}{reset}µs",
+            bold = style::Bold,
+            micros = micros,
+            reset = style::Reset
+        );
+        return;
     }
 
-    let millis = duration.whole_milliseconds();
+    if micros < 1_000_000 {
+        // Print as millis.
+        let millis = (micros as f64) / 1000f64;
+        eprintln!(
+            "{bold}{millis}{reset}ms",
+            bold = style::Bold,
+            millis = millis,
+            reset = style::Reset
+        );
+        return;
+    }
+
+    let millis = duration.as_millis();
     let seconds = (millis as f64) / 1000f64;
     eprintln!(
         "{bold}{seconds}{reset}s",
@@ -361,7 +357,7 @@ impl Repl {
         use std::io::Read;
         let path = path.into();
         let mut content: String = "".to_string();
-        match ::std::fs::File::open(path.clone()).and_then(|mut f| f.read_to_string(&mut content)) {
+        match std::fs::File::open(path.clone()).and_then(|mut f| f.read_to_string(&mut content)) {
             Ok(_) => self.execute_transact(content),
             Err(e) => eprintln!("Error reading file {}: {}", path, e),
         }
@@ -421,7 +417,7 @@ impl Repl {
     }
 
     fn help_command(&self, args: Vec<String>) {
-        let stdout = ::std::io::stdout();
+        let stdout = std::io::stdout();
         let mut output = TabWriter::new(stdout.lock());
         if args.is_empty() {
             for &(cmd, msg) in HELP_COMMANDS.iter() {
@@ -447,7 +443,7 @@ impl Repl {
     }
 
     fn print_results(&self, query_output: QueryOutput) -> Result<(), Error> {
-        let stdout = ::std::io::stdout();
+        let stdout = std::io::stdout();
         let mut output = TabWriter::new(stdout.lock());
 
         // Print the column headers.

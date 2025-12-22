@@ -247,7 +247,7 @@ mod tests {
     use std::path::{Path, PathBuf};
     use std::sync::mpsc;
     use std::sync::Mutex;
-    use std::time::Duration;
+    use std::time::{Duration, Instant};
 
     use mentat_db::cache::SQLiteAttributeCache;
 
@@ -319,12 +319,12 @@ mod tests {
             _ => panic!(),
         };
 
-        let start = time::Instant::now();
+        let start = Instant::now();
         let results = prepared.run(None).expect("results");
-        let end = time::Instant::now();
+        let end = Instant::now();
         println!(
             "Prepared cache execution took {}µs",
-            (end - start).whole_microseconds()
+            (end - start).as_micros()
         );
         assert_eq!(
             results.into_rel().expect("result"),

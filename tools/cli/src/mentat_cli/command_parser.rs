@@ -12,7 +12,7 @@ use combine::parser::char::{space, spaces, string};
 use combine::parser::combinator::attempt;
 use combine::{any, choice, eof, look_ahead, many1, satisfy, sep_end_by, token, Parser};
 
-use CliError;
+use crate::CliError;
 
 use edn;
 

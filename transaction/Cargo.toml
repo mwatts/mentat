@@ -1,4 +1,5 @@
 [package]
+edition = "2021"
 name = "mentat_transaction"
 version = "0.0.2"
 workspace = ".."
