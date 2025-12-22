@@ -167,28 +167,25 @@ impl Puller {
                     }
                     break;
                 }
-                PullAttributeSpec::Attribute(NamedPullAttribute {
-                    ref attribute,
-                    ref alias,
-                }) => {
-                    let alias = alias.as_ref().map(|ref r| r.to_value_rc());
+                PullAttributeSpec::Attribute(NamedPullAttribute { attribute, alias }) => {
+                    let alias = alias.as_ref().map(|r| r.to_value_rc());
                     match attribute {
                         // Handle :db/id.
-                        PullConcreteAttribute::Ident(ref i) if i.as_ref() == db_id.as_ref() => {
+                        PullConcreteAttribute::Ident(i) if i.as_ref() == db_id.as_ref() => {
                             // We only allow :db/id once.
                             if db_id_alias.is_some() {
                                 return Err(PullError::RepeatedDbId);
                             }
                             db_id_alias = Some(alias.unwrap_or_else(|| db_id.to_value_rc()));
                         }
-                        PullConcreteAttribute::Ident(ref i) => {
+                        PullConcreteAttribute::Ident(i) => {
                             if let Some(entid) = schema.get_entid(i) {
                                 let name = alias.unwrap_or_else(|| i.to_value_rc());
                                 names.insert(entid.into(), name);
                                 attrs.insert(entid.into());
                             }
                         }
-                        PullConcreteAttribute::Entid(ref entid) => {
+                        PullConcreteAttribute::Entid(entid) => {
                             let name = alias.map(Ok).unwrap_or_else(|| lookup_name(entid))?;
                             names.insert(*entid, name);
                             attrs.insert(*entid);
@@ -238,7 +235,7 @@ impl Puller {
         let mut maps = BTreeMap::new();
 
         // Collect :db/id if requested.
-        if let Some(ref alias) = self.db_id_alias {
+        if let Some(alias) = &self.db_id_alias {
             for e in entities.iter() {
                 let r = maps
                     .entry(*e)

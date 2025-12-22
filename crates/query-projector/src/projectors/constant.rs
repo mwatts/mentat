@@ -10,7 +10,7 @@
 
 use std::rc::Rc;
 
-use crate::{rusqlite, Element, FindSpec, QueryOutput, QueryResults, Rows, Schema};
+use crate::{Element, FindSpec, QueryOutput, QueryResults, Rows, Schema, rusqlite};
 
 use query_projector_traits::errors::Result;
 
@@ -53,7 +53,7 @@ impl Projector for ConstantProjector {
         self.project_without_rows()
     }
 
-    fn columns<'s>(&'s self) -> Box<dyn Iterator<Item = &Element> + 's> {
+    fn columns<'s>(&'s self) -> Box<dyn Iterator<Item = &'s Element> + 's> {
         self.spec.columns()
     }
 }

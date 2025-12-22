@@ -12,8 +12,8 @@
 
 use failure::ResultExt;
 
-use std::collections::hash_map::Entry;
 use std::collections::HashMap;
+use std::collections::hash_map::Entry;
 use std::iter::{once, repeat};
 use std::ops::Range;
 use std::path::Path;
@@ -21,10 +21,10 @@ use std::path::Path;
 use itertools;
 use itertools::Itertools;
 use rusqlite;
+use rusqlite::TransactionBehavior;
 use rusqlite::limits::Limit;
 use rusqlite::params_from_iter;
 use rusqlite::types::{ToSql, ToSqlOutput};
-use rusqlite::TransactionBehavior;
 
 use crate::bootstrap;
 use crate::{repeat_values, to_namespaced_keyword};
@@ -33,7 +33,7 @@ use edn::{DateTime, Utc, Uuid, Value};
 
 use crate::entids;
 
-use core_traits::{attribute, Attribute, AttributeBitFlags, Entid, TypedValue, ValueType};
+use core_traits::{Attribute, AttributeBitFlags, Entid, TypedValue, ValueType, attribute};
 
 use mentat_core::{AttributeMap, FromMicros, IdentMap, Schema, ToMicros, ValueRc};
 
@@ -42,7 +42,7 @@ use db_traits::errors::{DbErrorKind, Result};
 use crate::metadata;
 use crate::schema::SchemaBuilding;
 use crate::tx::transact;
-use crate::types::{AVMap, AVPair, Partition, PartitionMap, DB};
+use crate::types::{AVMap, AVPair, DB, Partition, PartitionMap};
 
 use crate::watcher::NullWatcher;
 use std::convert::TryInto;
@@ -157,11 +157,7 @@ const FALSE: &bool = &false;
 /// `rusqlite` is designed around references to values; this lets us use computed bools easily.
 #[inline(always)]
 fn to_bool_ref(x: bool) -> &'static bool {
-    if x {
-        TRUE
-    } else {
-        FALSE
-    }
+    if x { TRUE } else { FALSE }
 }
 
 lazy_static! {
@@ -279,7 +275,7 @@ fn get_user_version(conn: &rusqlite::Connection) -> Result<i32> {
 /// Do just enough work that either `create_current_version` or sync can populate the DB.
 pub fn create_empty_current_version(
     conn: &mut rusqlite::Connection,
-) -> Result<(rusqlite::Transaction, DB)> {
+) -> Result<(rusqlite::Transaction<'_>, DB)> {
     let tx = conn.transaction_with_behavior(TransactionBehavior::Exclusive)?;
 
     for statement in (&V1_STATEMENTS).iter() {
@@ -397,7 +393,7 @@ pub trait TypedSQLValue {
         value: rusqlite::types::Value,
         value_type_tag: i32,
     ) -> Result<TypedValue>;
-    fn to_sql_value_pair(&self) -> (ToSqlOutput, i32);
+    fn to_sql_value_pair(&self) -> (ToSqlOutput<'_>, i32);
     fn from_edn_value(value: &Value) -> Option<TypedValue>;
     fn to_edn_value_pair(&self) -> (Value, ValueType);
 }
@@ -452,16 +448,16 @@ impl TypedSQLValue for TypedValue {
             Value::Instant(x) => Some(TypedValue::Instant(*x)),
             Value::Integer(x) => Some(TypedValue::Long(*x)),
             Value::Uuid(x) => Some(TypedValue::Uuid(*x)),
-            Value::Float(ref x) => Some(TypedValue::Double(*x)),
-            Value::Text(ref x) => Some(x.clone().into()),
-            Value::Keyword(ref x) => Some(x.clone().into()),
+            Value::Float(x) => Some(TypedValue::Double(*x)),
+            Value::Text(x) => Some(x.clone().into()),
+            Value::Keyword(x) => Some(x.clone().into()),
             Value::Bytes(b) => Some(TypedValue::Bytes(b.clone())),
             _ => None,
         }
     }
 
     /// Return the corresponding SQLite `value` and `value_type_tag` pair.
-    fn to_sql_value_pair(&self) -> (ToSqlOutput, i32) {
+    fn to_sql_value_pair(&self) -> (ToSqlOutput<'_>, i32) {
         match self {
             TypedValue::Ref(x) => ((*x).into(), 0),
             TypedValue::Boolean(x) => ((if *x { 1 } else { 0 }).into(), 1),
@@ -469,9 +465,9 @@ impl TypedSQLValue for TypedValue {
             // SQLite distinguishes integral from decimal types, allowing long and double to share a tag.
             TypedValue::Long(x) => ((*x).into(), 5),
             TypedValue::Double(x) => (x.into_inner().into(), 5),
-            TypedValue::String(ref x) => (x.as_str().into(), 10),
-            TypedValue::Uuid(ref u) => (u.as_bytes().to_vec().into(), 11),
-            TypedValue::Keyword(ref x) => (x.to_string().into(), 13),
+            TypedValue::String(x) => (x.as_str().into(), 10),
+            TypedValue::Uuid(u) => (u.as_bytes().to_vec().into(), 11),
+            TypedValue::Keyword(x) => (x.to_string().into(), 13),
             TypedValue::Bytes(b) => (b.to_vec().into(), 15),
         }
     }
@@ -484,9 +480,9 @@ impl TypedSQLValue for TypedValue {
             TypedValue::Instant(x) => (Value::Instant(*x), ValueType::Instant),
             TypedValue::Long(x) => (Value::Integer(*x), ValueType::Long),
             TypedValue::Double(x) => (Value::Float(*x), ValueType::Double),
-            TypedValue::String(ref x) => (Value::Text(x.as_ref().clone()), ValueType::String),
-            TypedValue::Uuid(ref u) => (Value::Uuid(*u), ValueType::Uuid),
-            TypedValue::Keyword(ref x) => (Value::Keyword(x.as_ref().clone()), ValueType::Keyword),
+            TypedValue::String(x) => (Value::Text(x.as_ref().clone()), ValueType::String),
+            TypedValue::Uuid(u) => (Value::Uuid(*u), ValueType::Uuid),
+            TypedValue::Keyword(x) => (Value::Keyword(x.as_ref().clone()), ValueType::Keyword),
             TypedValue::Bytes(b) => (Value::Bytes(b.clone()), ValueType::Bytes),
         }
     }
@@ -999,7 +995,7 @@ impl MentatStoring for rusqlite::Connection {
                                    u8 /* flags0 */,
                                    i64 /* searchid */)>> = chunk.map(|&(e, a, ref attribute, ref typed_value, added)| {
                 match typed_value {
-                    TypedValue::String(ref rc) => {
+                    TypedValue::String(rc) => {
                         datom_count += 1;
                         let entry = seen.entry(rc.clone());
                         match entry {
@@ -1338,9 +1334,9 @@ mod tests {
     use std::borrow::Borrow;
 
     use super::*;
-    use crate::debug::{tempids, TestConn};
+    use crate::debug::{TestConn, tempids};
     use crate::internal_types::Term;
-    use core_traits::{attribute, KnownEntid};
+    use core_traits::{KnownEntid, attribute};
     use db_traits::errors;
     use edn::entities::OpType;
     use edn::{self, InternSet};
@@ -1517,8 +1513,13 @@ mod tests {
 
         // Test that we type-check properly.  In the value position, (transaction-tx) yields a ref;
         // :db/ident expects a keyword.
-        assert_transact!(conn, "[[:db/add 444 :db/ident (transaction-tx)]]",
-                         Err("not yet implemented: Transaction function transaction-tx produced value of type :db.type/ref but expected type :db.type/keyword"));
+        assert_transact!(
+            conn,
+            "[[:db/add 444 :db/ident (transaction-tx)]]",
+            Err(
+                "not yet implemented: Transaction function transaction-tx produced value of type :db.type/ref but expected type :db.type/keyword"
+            )
+        );
 
         // Test that we can assert metadata about the current transaction.
         assert_transact!(
@@ -1645,7 +1646,9 @@ mod tests {
     #[test]
     fn test_upsert_issue_538() {
         let mut conn = TestConn::default();
-        assert_transact!(conn, "
+        assert_transact!(
+            conn,
+            "
             [{:db/ident :person/name
               :db/valueType :db.type/string
               :db/cardinality :db.cardinality/many}
@@ -1656,7 +1659,10 @@ mod tests {
               :db/valueType :db.type/string
               :db/unique :db.unique/identity
               :db/cardinality :db.cardinality/many}]",
-              Err("bad schema assertion: :db/unique :db/unique_identity without :db/index true for entid: 65538"));
+            Err(
+                "bad schema assertion: :db/unique :db/unique_identity without :db/index true for entid: 65538"
+            )
+        );
     }
 
     // TODO: don't use :db/ident to test upserts!
@@ -1745,21 +1751,36 @@ mod tests {
         );
 
         // Conflicting upserts fail.
-        assert_transact!(conn, "[[:db/add \"t1\" :db/ident :name/Ivan]
+        assert_transact!(
+            conn,
+            "[[:db/add \"t1\" :db/ident :name/Ivan]
                                  [:db/add \"t1\" :db/ident :name/Petr]]",
-                         Err("schema constraint violation: conflicting upserts:\n  tempid External(\"t1\") upserts to {KnownEntid(100), KnownEntid(101)}\n"));
+            Err(
+                "schema constraint violation: conflicting upserts:\n  tempid External(\"t1\") upserts to {KnownEntid(100), KnownEntid(101)}\n"
+            )
+        );
 
         // The error messages of conflicting upserts gives information about all failing upserts (in a particular generation).
-        assert_transact!(conn, "[[:db/add \"t2\" :db/ident :name/Grigory]
+        assert_transact!(
+            conn,
+            "[[:db/add \"t2\" :db/ident :name/Grigory]
                                  [:db/add \"t2\" :db/ident :name/Petr]
                                  [:db/add \"t2\" :db/ident :name/Ivan]
                                  [:db/add \"t1\" :db/ident :name/Ivan]
                                  [:db/add \"t1\" :db/ident :name/Petr]]",
-                         Err("schema constraint violation: conflicting upserts:\n  tempid External(\"t1\") upserts to {KnownEntid(100), KnownEntid(101)}\n  tempid External(\"t2\") upserts to {KnownEntid(100), KnownEntid(101)}\n"));
+            Err(
+                "schema constraint violation: conflicting upserts:\n  tempid External(\"t1\") upserts to {KnownEntid(100), KnownEntid(101)}\n  tempid External(\"t2\") upserts to {KnownEntid(100), KnownEntid(101)}\n"
+            )
+        );
 
         // tempids in :db/retract that don't upsert fail.
-        assert_transact!(conn, "[[:db/retract \"t1\" :db/ident :name/Anonymous]]",
-                         Err("not yet implemented: [:db/retract ...] entity referenced tempid that did not upsert: t1"));
+        assert_transact!(
+            conn,
+            "[[:db/retract \"t1\" :db/ident :name/Anonymous]]",
+            Err(
+                "not yet implemented: [:db/retract ...] entity referenced tempid that did not upsert: t1"
+            )
+        );
 
         // tempids in :db/retract that do upsert are retracted.  The ref given doesn't exist, so the
         // assertion will be ignored.
@@ -1962,10 +1983,14 @@ mod tests {
         );
 
         // Cannot retract a non-defining set of characteristics of an installed attribute.
-        assert_transact!(conn,
-                         "[[:db/retract 100 :db/valueType :db.type/long]
+        assert_transact!(
+            conn,
+            "[[:db/retract 100 :db/valueType :db.type/long]
                          [:db/retract 100 :db/cardinality :db.cardinality/many]]",
-                         Err("bad schema assertion: Retracting defining attributes of a schema without retracting its :db/ident is not permitted."));
+            Err(
+                "bad schema assertion: Retracting defining attributes of a schema without retracting its :db/ident is not permitted."
+            )
+        );
 
         // See https://github.com/mozilla/mentat/issues/796.
         // assert_transact!(conn,
@@ -2001,8 +2026,13 @@ mod tests {
         );
 
         // Trying to alter the :db/valueType will fail.
-        assert_transact!(conn, "[[:db/add 100 :db/valueType :db.type/long]]",
-                         Err("bad schema assertion: Schema alteration for existing attribute with entid 100 is not valid"));
+        assert_transact!(
+            conn,
+            "[[:db/add 100 :db/valueType :db.type/long]]",
+            Err(
+                "bad schema assertion: Schema alteration for existing attribute with entid 100 is not valid"
+            )
+        );
 
         // But we can alter the cardinality.
         assert_transact!(conn, "[[:db/add 100 :db/cardinality :db.cardinality/many]]");
@@ -2110,11 +2140,12 @@ mod tests {
             100
         );
         // Ident map no longer contains the old ident.
-        assert!(conn
-            .schema
-            .ident_map
-            .get(&to_namespaced_keyword(":name/Ivan").unwrap())
-            .is_none());
+        assert!(
+            conn.schema
+                .ident_map
+                .get(&to_namespaced_keyword(":name/Ivan").unwrap())
+                .is_none()
+        );
 
         // We can re-purpose an old ident.
         assert_transact!(conn, "[[:db/add 101 :db/ident :name/Ivan]]");
@@ -2160,11 +2191,12 @@ mod tests {
         assert_transact!(conn, "[[:db/retract :name/Petr :db/ident :name/Petr]]");
         // It's really gone.
         assert!(conn.schema.entid_map.get(&100).is_none());
-        assert!(conn
-            .schema
-            .ident_map
-            .get(&to_namespaced_keyword(":name/Petr").unwrap())
-            .is_none());
+        assert!(
+            conn.schema
+                .ident_map
+                .get(&to_namespaced_keyword(":name/Petr").unwrap())
+                .is_none()
+        );
     }
 
     #[test]
@@ -2196,9 +2228,14 @@ mod tests {
         );
 
         // We can't always go from :db.cardinality/many to :db.cardinality/one.
-        assert_transact!(conn, "[[:db/add 100 :db/cardinality :db.cardinality/one]]",
-                         // TODO: give more helpful error details.
-                         Err("schema alteration failed: Cannot alter schema attribute 100 to be :db.cardinality/one"));
+        assert_transact!(
+            conn,
+            "[[:db/add 100 :db/cardinality :db.cardinality/one]]",
+            // TODO: give more helpful error details.
+            Err(
+                "schema alteration failed: Cannot alter schema attribute 100 to be :db.cardinality/one"
+            )
+        );
     }
 
     #[test]
@@ -2220,14 +2257,24 @@ mod tests {
         );
 
         // We can't always migrate to be :db.unique/value.
-        assert_transact!(conn, "[[:db/add :test/ident :db/unique :db.unique/value]]",
-                         // TODO: give more helpful error details.
-                         Err("schema alteration failed: Cannot alter schema attribute 100 to be :db.unique/value"));
+        assert_transact!(
+            conn,
+            "[[:db/add :test/ident :db/unique :db.unique/value]]",
+            // TODO: give more helpful error details.
+            Err(
+                "schema alteration failed: Cannot alter schema attribute 100 to be :db.unique/value"
+            )
+        );
 
         // Not even indirectly!
-        assert_transact!(conn, "[[:db/add :test/ident :db/unique :db.unique/identity]]",
-                         // TODO: give more helpful error details.
-                         Err("schema alteration failed: Cannot alter schema attribute 100 to be :db.unique/identity"));
+        assert_transact!(
+            conn,
+            "[[:db/add :test/ident :db/unique :db.unique/identity]]",
+            // TODO: give more helpful error details.
+            Err(
+                "schema alteration failed: Cannot alter schema attribute 100 to be :db.unique/identity"
+            )
+        );
 
         // But we can if we make sure there's no repeated [a v] pair.
         assert_transact!(conn, "[[:db/add 201 :test/ident 2]]");
@@ -2328,9 +2375,13 @@ mod tests {
             Err("bad schema assertion: Retracting attribute 12 for entity 111 not permitted.")
         );
 
-        assert_transact!(conn,
-                         "[[:db/add 222 :db/fulltext true]]",
-                         Err("bad schema assertion: Schema alteration for existing attribute with entid 222 is not valid"));
+        assert_transact!(
+            conn,
+            "[[:db/add 222 :db/fulltext true]]",
+            Err(
+                "bad schema assertion: Schema alteration for existing attribute with entid 222 is not valid"
+            )
+        );
     }
 
     #[test]
@@ -2570,19 +2621,29 @@ mod tests {
         );
 
         // We cannot resolve lookup refs that aren't :db/unique.
-        assert_transact!(conn,
-                         "[[:db/add (lookup-ref :test/not_unique :test/keyword) :test/not_unique :test/keyword]]",
-                         Err("not yet implemented: Cannot resolve (lookup-ref 333 Keyword(Keyword(NamespaceableName { namespace: Some(\"test\"), name: \"keyword\" }))) with attribute that is not :db/unique"));
+        assert_transact!(
+            conn,
+            "[[:db/add (lookup-ref :test/not_unique :test/keyword) :test/not_unique :test/keyword]]",
+            Err(
+                "not yet implemented: Cannot resolve (lookup-ref 333 Keyword(Keyword(NamespaceableName { namespace: Some(\"test\"), name: \"keyword\" }))) with attribute that is not :db/unique"
+            )
+        );
 
         // We type check the lookup ref's value against the lookup ref's attribute.
-        assert_transact!(conn,
-                         "[[:db/add (lookup-ref :test/unique_value :test/not_a_string) :test/not_unique :test/keyword]]",
-                         Err("value \':test/not_a_string\' is not the expected Mentat value type String"));
+        assert_transact!(
+            conn,
+            "[[:db/add (lookup-ref :test/unique_value :test/not_a_string) :test/not_unique :test/keyword]]",
+            Err("value \':test/not_a_string\' is not the expected Mentat value type String")
+        );
 
         // Each lookup ref in the entity column must resolve
-        assert_transact!(conn,
-                         "[[:db/add (lookup-ref :test/unique_value \"unmatched string value\") :test/not_unique :test/keyword]]",
-                         Err("no entid found for ident: couldn\'t lookup [a v]: (111, String(\"unmatched string value\"))"));
+        assert_transact!(
+            conn,
+            "[[:db/add (lookup-ref :test/unique_value \"unmatched string value\") :test/not_unique :test/keyword]]",
+            Err(
+                "no entid found for ident: couldn\'t lookup [a v]: (111, String(\"unmatched string value\"))"
+            )
+        );
     }
 
     #[test]
@@ -2639,9 +2700,13 @@ mod tests {
         );
 
         // We cannot resolve lookup refs for attributes that aren't :db/ref.
-        assert_transact!(conn,
-                         "[[:db/add \"t\" :test/not_unique (lookup-ref :test/unique_value \"test this\")]]",
-                         Err("not yet implemented: Cannot resolve value lookup ref for attribute 333 that is not :db/valueType :db.type/ref"));
+        assert_transact!(
+            conn,
+            "[[:db/add \"t\" :test/not_unique (lookup-ref :test/unique_value \"test this\")]]",
+            Err(
+                "not yet implemented: Cannot resolve value lookup ref for attribute 333 that is not :db/valueType :db.type/ref"
+            )
+        );
 
         // If a value column lookup ref resolves, we can upsert against it.  Here, the lookup ref
         // resolves to 501, which upserts "t" to 601.
@@ -2657,9 +2722,13 @@ mod tests {
         );
 
         // Each lookup ref in the value column must resolve
-        assert_transact!(conn,
-                         "[[:db/add \"t\" :test/ref (lookup-ref :test/unique_value \"unmatched string value\")]]",
-                         Err("no entid found for ident: couldn\'t lookup [a v]: (111, String(\"unmatched string value\"))"));
+        assert_transact!(
+            conn,
+            "[[:db/add \"t\" :test/ref (lookup-ref :test/unique_value \"unmatched string value\")]]",
+            Err(
+                "no entid found for ident: couldn\'t lookup [a v]: (111, String(\"unmatched string value\"))"
+            )
+        );
     }
 
     #[test]
@@ -2707,12 +2776,20 @@ mod tests {
         );
 
         // Check that we cannot explode vectors for :db.cardinality/one attributes.
-        assert_transact!(conn,
-                         "[[:db/add 501 :test/one [1]]]",
-                         Err("not yet implemented: Cannot explode vector value for attribute 222 that is not :db.cardinality :db.cardinality/many"));
-        assert_transact!(conn,
-                         "[[:db/add 501 :test/one [2 3]]]",
-                         Err("not yet implemented: Cannot explode vector value for attribute 222 that is not :db.cardinality :db.cardinality/many"));
+        assert_transact!(
+            conn,
+            "[[:db/add 501 :test/one [1]]]",
+            Err(
+                "not yet implemented: Cannot explode vector value for attribute 222 that is not :db.cardinality :db.cardinality/many"
+            )
+        );
+        assert_transact!(
+            conn,
+            "[[:db/add 501 :test/one [2 3]]]",
+            Err(
+                "not yet implemented: Cannot explode vector value for attribute 222 that is not :db.cardinality :db.cardinality/many"
+            )
+        );
     }
 
     #[test]
@@ -2809,9 +2886,13 @@ mod tests {
 
         // Verify that we can't explode map notation with nested maps if the inner map would be
         // dangling.
-        assert_transact!(conn,
-                         "[{:test/dangling {:test/many 11}}]",
-                         Err("not yet implemented: Cannot explode nested map value that would lead to dangling entity for attribute 444"));
+        assert_transact!(
+            conn,
+            "[{:test/dangling {:test/many 11}}]",
+            Err(
+                "not yet implemented: Cannot explode nested map value that would lead to dangling entity for attribute 444"
+            )
+        );
 
         // Verify that we can explode map notation with nested maps, even if the inner map would be
         // dangling, if we give a :db/id explicitly.
@@ -2978,19 +3059,31 @@ mod tests {
         // dynamic processor here.
 
         // Verify that we can't explode reverse notation in map notation with nested value maps.
-        assert_transact!(conn,
-                         "[{:test/_dangling {:test/many 14}}]",
-                         Err("not yet implemented: Cannot explode map notation value in :attr/_reversed notation for attribute 444"));
+        assert_transact!(
+            conn,
+            "[{:test/_dangling {:test/many 14}}]",
+            Err(
+                "not yet implemented: Cannot explode map notation value in :attr/_reversed notation for attribute 444"
+            )
+        );
 
         // Verify that we can't explode reverse notation in map notation with nested value vectors.
-        assert_transact!(conn,
-                         "[{:test/_dangling [:test/many]}]",
-                         Err("not yet implemented: Cannot explode vector value in :attr/_reversed notation for attribute 444"));
+        assert_transact!(
+            conn,
+            "[{:test/_dangling [:test/many]}]",
+            Err(
+                "not yet implemented: Cannot explode vector value in :attr/_reversed notation for attribute 444"
+            )
+        );
 
         // Verify that we can't use reverse notation with non-:db.type/ref attributes.
-        assert_transact!(conn,
-                         "[{:test/_unique 500}]",
-                         Err("not yet implemented: Cannot use :attr/_reversed notation for attribute 333 that is not :db/valueType :db.type/ref"));
+        assert_transact!(
+            conn,
+            "[{:test/_unique 500}]",
+            Err(
+                "not yet implemented: Cannot use :attr/_reversed notation for attribute 333 that is not :db/valueType :db.type/ref"
+            )
+        );
 
         // Verify that we can't use reverse notation with unrecognized attributes.
         assert_transact!(
@@ -3042,22 +3135,32 @@ mod tests {
 
         // You can try to assert two values for the same entity and attribute,
         // but you'll get an error.
-        assert_transact!(conn, r#"[
+        assert_transact!(
+            conn,
+            r#"[
             [:db/add "foo" :test/unique "x"]
             [:db/add "foo" :test/one 123]
             [:db/add "bar" :test/unique "x"]
             [:db/add "bar" :test/one 124]
         ]"#,
-        // This is implementation specific (due to the allocated entid), but it should be deterministic.
-        Err("schema constraint violation: cardinality conflicts:\n  CardinalityOneAddConflict { e: 65536, a: 111, vs: {Long(123), Long(124)} }\n"));
+            // This is implementation specific (due to the allocated entid), but it should be deterministic.
+            Err(
+                "schema constraint violation: cardinality conflicts:\n  CardinalityOneAddConflict { e: 65536, a: 111, vs: {Long(123), Long(124)} }\n"
+            )
+        );
 
         // It also fails for map notation.
-        assert_transact!(conn, r#"[
+        assert_transact!(
+            conn,
+            r#"[
             {:test/unique "x", :test/one 123}
             {:test/unique "x", :test/one 124}
         ]"#,
-        // This is implementation specific (due to the allocated entid), but it should be deterministic.
-        Err("schema constraint violation: cardinality conflicts:\n  CardinalityOneAddConflict { e: 65536, a: 111, vs: {Long(123), Long(124)} }\n"));
+            // This is implementation specific (due to the allocated entid), but it should be deterministic.
+            Err(
+                "schema constraint violation: cardinality conflicts:\n  CardinalityOneAddConflict { e: 65536, a: 111, vs: {Long(123), Long(124)} }\n"
+            )
+        );
     }
 
     #[test]
@@ -3106,21 +3209,31 @@ mod tests {
         // upserts!  This tests that we don't resolve too far, giving a chance for those upserts to
         // fail.  This error message is crossing generations, although it's not reflected in the
         // error data structure.
-        assert_transact!(conn, r#"[
+        assert_transact!(
+            conn,
+            r#"[
             [:db/add "a" :page/id "1"]
             [:db/add "a" :page/ref "b"]
             [:db/add "b" :page/id "2"]
             [:db/add "b" :page/ref "a"]
         ]"#,
-        Err("schema constraint violation: conflicting upserts:\n  tempid External(\"a\") upserts to {KnownEntid(111), KnownEntid(222)}\n  tempid External(\"b\") upserts to {KnownEntid(111), KnownEntid(222)}\n"));
+            Err(
+                "schema constraint violation: conflicting upserts:\n  tempid External(\"a\") upserts to {KnownEntid(111), KnownEntid(222)}\n  tempid External(\"b\") upserts to {KnownEntid(111), KnownEntid(222)}\n"
+            )
+        );
 
         // Here's a case where the upsert is not resolved, just allocated, but leads to conflicting
         // cardinality one datoms.
-        assert_transact!(conn, r#"[
+        assert_transact!(
+            conn,
+            r#"[
             [:db/add "x" :page/ref 333]
             [:db/add "x" :page/ref 444]
         ]"#,
-        Err("schema constraint violation: cardinality conflicts:\n  CardinalityOneAddConflict { e: 65539, a: 65537, vs: {Ref(333), Ref(444)} }\n"));
+            Err(
+                "schema constraint violation: cardinality conflicts:\n  CardinalityOneAddConflict { e: 65539, a: 65537, vs: {Ref(333), Ref(444)} }\n"
+            )
+        );
     }
 
     #[test]
@@ -3317,11 +3430,16 @@ mod tests {
         );
 
         // Can't transact multiple datoms for a cardinality one attribute.
-        assert_transact!(conn, r#"[
+        assert_transact!(
+            conn,
+            r#"[
             [:db/add 100 :test/one 3]
             [:db/add 100 :test/one 4]
         ]"#,
-        Err("schema constraint violation: cardinality conflicts:\n  CardinalityOneAddConflict { e: 100, a: 200, vs: {Long(3), Long(4)} }\n"));
+            Err(
+                "schema constraint violation: cardinality conflicts:\n  CardinalityOneAddConflict { e: 100, a: 200, vs: {Long(3), Long(4)} }\n"
+            )
+        );
 
         // Can transact multiple datoms for a cardinality many attribute.
         assert_transact!(
@@ -3333,13 +3451,18 @@ mod tests {
         );
 
         // Can't add and retract the same datom for an attribute, regardless of cardinality.
-        assert_transact!(conn, r#"[
+        assert_transact!(
+            conn,
+            r#"[
             [:db/add     100 :test/one 7]
             [:db/retract 100 :test/one 7]
             [:db/add     100 :test/many 8]
             [:db/retract 100 :test/many 8]
         ]"#,
-        Err("schema constraint violation: cardinality conflicts:\n  AddRetractConflict { e: 100, a: 200, vs: {Long(7)} }\n  AddRetractConflict { e: 100, a: 201, vs: {Long(8)} }\n"));
+            Err(
+                "schema constraint violation: cardinality conflicts:\n  AddRetractConflict { e: 100, a: 200, vs: {Long(7)} }\n  AddRetractConflict { e: 100, a: 201, vs: {Long(8)} }\n"
+            )
+        );
     }
 
     #[test]

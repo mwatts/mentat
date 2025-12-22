@@ -11,8 +11,8 @@
 use std::rc::Rc;
 
 use crate::{
-    rusqlite, Binding, CombinedProjection, Element, FindSpec, ProjectedElements, QueryOutput,
-    QueryResults, RelResult, Row, Rows, Schema, TypedIndex,
+    Binding, CombinedProjection, Element, FindSpec, ProjectedElements, QueryOutput, QueryResults,
+    RelResult, Row, Rows, Schema, TypedIndex, rusqlite,
 };
 
 use query_projector_traits::errors::Result;
@@ -63,7 +63,7 @@ impl Projector for ScalarProjector {
         })
     }
 
-    fn columns<'s>(&'s self) -> Box<dyn Iterator<Item = &Element> + 's> {
+    fn columns<'s>(&'s self) -> Box<dyn Iterator<Item = &'s Element> + 's> {
         self.spec.columns()
     }
 }
@@ -135,7 +135,7 @@ impl Projector for TupleProjector {
         })
     }
 
-    fn columns<'s>(&'s self) -> Box<dyn Iterator<Item = &Element> + 's> {
+    fn columns<'s>(&'s self) -> Box<dyn Iterator<Item = &'s Element> + 's> {
         self.spec.columns()
     }
 }
@@ -218,7 +218,7 @@ impl Projector for RelProjector {
         })
     }
 
-    fn columns<'s>(&'s self) -> Box<dyn Iterator<Item = &Element> + 's> {
+    fn columns<'s>(&'s self) -> Box<dyn Iterator<Item = &'s Element> + 's> {
         self.spec.columns()
     }
 }
@@ -274,7 +274,7 @@ impl Projector for CollProjector {
         })
     }
 
-    fn columns<'s>(&'s self) -> Box<dyn Iterator<Item = &Element> + 's> {
+    fn columns<'s>(&'s self) -> Box<dyn Iterator<Item = &'s Element> + 's> {
         self.spec.columns()
     }
 }

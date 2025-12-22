@@ -337,14 +337,14 @@ macro_rules! def_common_value_methods {
 
         pub fn is_keyword(&self) -> bool {
             match self {
-                $t::Keyword(ref k) => !k.is_namespaced(),
+                $t::Keyword(k) => !k.is_namespaced(),
                 _ => false,
             }
         }
 
         pub fn is_namespaced_keyword(&self) -> bool {
             match self {
-                $t::Keyword(ref k) => k.is_namespaced(),
+                $t::Keyword(k) => k.is_namespaced(),
                 _ => false,
             }
         }
@@ -370,21 +370,21 @@ macro_rules! def_common_value_methods {
 
         pub fn as_keyword(&self) -> Option<&symbols::Keyword> {
             match self {
-                $t::Keyword(ref k) => Some(k),
+                $t::Keyword(k) => Some(k),
                 _ => None,
             }
         }
 
         pub fn as_plain_keyword(&self) -> Option<&symbols::Keyword> {
             match self {
-                $t::Keyword(ref k) if !k.is_namespaced() => Some(k),
+                $t::Keyword(k) if !k.is_namespaced() => Some(k),
                 _ => None,
             }
         }
 
         pub fn as_namespaced_keyword(&self) -> Option<&symbols::Keyword> {
             match self {
-                $t::Keyword(ref k) if k.is_namespaced() => Some(k),
+                $t::Keyword(k) if k.is_namespaced() => Some(k),
                 _ => None,
             }
         }

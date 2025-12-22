@@ -47,8 +47,8 @@ use mentat_core::{HasSchema, Schema, TxReport, ValueRc};
 use mentat_query_pull::{pull_attributes_for_entities, pull_attributes_for_entity};
 
 use mentat_db::{
-    transact, transact_terms, InProgressObserverTransactWatcher, PartitionMap, TransactWatcher,
-    TransactableValue, TxObservationService,
+    InProgressObserverTransactWatcher, PartitionMap, TransactWatcher, TransactableValue,
+    TxObservationService, transact, transact_terms,
 };
 
 use mentat_db::internal_types::TermWithTempIds;
@@ -64,8 +64,8 @@ pub use crate::entity_builder::{InProgressBuilder, TermBuilder};
 pub use crate::metadata::Metadata;
 
 use crate::query::{
-    lookup_value_for_attribute, lookup_values_for_attribute, q_explain, q_once, q_prepare,
-    q_uncached, Known, PreparedResult, QueryExplanation, QueryInputs, QueryOutput,
+    Known, PreparedResult, QueryExplanation, QueryInputs, QueryOutput, lookup_value_for_attribute,
+    lookup_values_for_attribute, q_explain, q_once, q_prepare, q_uncached,
 };
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -110,7 +110,7 @@ pub trait Queryable {
     fn q_once<T>(&self, query: &str, inputs: T) -> Result<QueryOutput>
     where
         T: Into<Option<QueryInputs>>;
-    fn q_prepare<T>(&self, query: &str, inputs: T) -> PreparedResult
+    fn q_prepare<T>(&self, query: &str, inputs: T) -> PreparedResult<'_>
     where
         T: Into<Option<QueryInputs>>;
     fn lookup_values_for_attribute<E>(
@@ -349,7 +349,7 @@ impl<'a, 'c> Queryable for InProgressRead<'a, 'c> {
         self.in_progress.q_once(query, inputs)
     }
 
-    fn q_prepare<T>(&self, query: &str, inputs: T) -> PreparedResult
+    fn q_prepare<T>(&self, query: &str, inputs: T) -> PreparedResult<'_>
     where
         T: Into<Option<QueryInputs>>,
     {
@@ -424,7 +424,7 @@ impl<'a, 'c> Queryable for InProgress<'a, 'c> {
         }
     }
 
-    fn q_prepare<T>(&self, query: &str, inputs: T) -> PreparedResult
+    fn q_prepare<T>(&self, query: &str, inputs: T) -> PreparedResult<'_>
     where
         T: Into<Option<QueryInputs>>,
     {

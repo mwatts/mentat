@@ -308,7 +308,7 @@ impl ::enum_set::CLike for ValueType {
     }
 
     unsafe fn from_u32(v: u32) -> ValueType {
-        ::std::mem::transmute(v)
+        unsafe { ::std::mem::transmute(v) }
     }
 }
 
@@ -791,21 +791,21 @@ impl Binding {
 
     pub fn as_scalar(&self) -> Option<&TypedValue> {
         match self {
-            Binding::Scalar(ref v) => Some(v),
+            Binding::Scalar(v) => Some(v),
             _ => None,
         }
     }
 
     pub fn as_vec(&self) -> Option<&Vec<Binding>> {
         match self {
-            Binding::Vec(ref v) => Some(v),
+            Binding::Vec(v) => Some(v),
             _ => None,
         }
     }
 
     pub fn as_map(&self) -> Option<&StructuredMap> {
         match self {
-            Binding::Map(ref v) => Some(v),
+            Binding::Map(v) => Some(v),
             _ => None,
         }
     }
@@ -877,7 +877,7 @@ impl Binding {
 
     pub fn value_type(&self) -> Option<ValueType> {
         match self {
-            Binding::Scalar(ref v) => Some(v.value_type()),
+            Binding::Scalar(v) => Some(v.value_type()),
 
             Binding::Map(_) => None,
             Binding::Vec(_) => None,
@@ -991,56 +991,56 @@ impl Binding {
 
     pub fn as_entid(&self) -> Option<&Entid> {
         match self {
-            Binding::Scalar(TypedValue::Ref(ref v)) => Some(v),
+            Binding::Scalar(TypedValue::Ref(v)) => Some(v),
             _ => None,
         }
     }
 
     pub fn as_kw(&self) -> Option<&ValueRc<Keyword>> {
         match self {
-            Binding::Scalar(TypedValue::Keyword(ref v)) => Some(v),
+            Binding::Scalar(TypedValue::Keyword(v)) => Some(v),
             _ => None,
         }
     }
 
     pub fn as_boolean(&self) -> Option<&bool> {
         match self {
-            Binding::Scalar(TypedValue::Boolean(ref v)) => Some(v),
+            Binding::Scalar(TypedValue::Boolean(v)) => Some(v),
             _ => None,
         }
     }
 
     pub fn as_long(&self) -> Option<&i64> {
         match self {
-            Binding::Scalar(TypedValue::Long(ref v)) => Some(v),
+            Binding::Scalar(TypedValue::Long(v)) => Some(v),
             _ => None,
         }
     }
 
     pub fn as_double(&self) -> Option<&f64> {
         match self {
-            Binding::Scalar(TypedValue::Double(ref v)) => Some(&v.0),
+            Binding::Scalar(TypedValue::Double(v)) => Some(&v.0),
             _ => None,
         }
     }
 
     pub fn as_instant(&self) -> Option<&DateTime<Utc>> {
         match self {
-            Binding::Scalar(TypedValue::Instant(ref v)) => Some(v),
+            Binding::Scalar(TypedValue::Instant(v)) => Some(v),
             _ => None,
         }
     }
 
     pub fn as_string(&self) -> Option<&ValueRc<String>> {
         match self {
-            Binding::Scalar(TypedValue::String(ref v)) => Some(v),
+            Binding::Scalar(TypedValue::String(v)) => Some(v),
             _ => None,
         }
     }
 
     pub fn as_uuid(&self) -> Option<&Uuid> {
         match self {
-            Binding::Scalar(TypedValue::Uuid(ref v)) => Some(v),
+            Binding::Scalar(TypedValue::Uuid(v)) => Some(v),
             _ => None,
         }
     }

@@ -62,11 +62,7 @@ trait Intersection<K> {
 
 impl<K: Ord, T> Contains<K, T> for BTreeSet<K> {
     fn when_contains<F: FnOnce() -> T>(&self, k: &K, f: F) -> Option<T> {
-        if self.contains(k) {
-            Some(f())
-        } else {
-            None
-        }
+        if self.contains(k) { Some(f()) } else { None }
     }
 }
 
@@ -301,7 +297,7 @@ impl ConjoiningClauses {
 impl ConjoiningClauses {
     pub(crate) fn derive_types_from_find_spec(&mut self, find_spec: &FindSpec) {
         for spec in find_spec.columns() {
-            if let Element::Pull(Pull { ref var, .. }) = spec {
+            if let Element::Pull(Pull { var, .. }) = spec {
                 self.constrain_var_to_type(var.clone(), ValueType::Ref);
             }
         }
@@ -380,7 +376,7 @@ impl ConjoiningClauses {
     }
 
     /// Return an iterator over the variables externally bound to values.
-    pub fn value_bound_variables(&self) -> VariableIterator {
+    pub fn value_bound_variables(&self) -> VariableIterator<'_> {
         VariableIterator(self.value_bindings.keys())
     }
 
@@ -461,8 +457,8 @@ impl ConjoiningClauses {
                 | Column::Fixed(DatomsColumn::Entity)
                 | Column::Fixed(DatomsColumn::Tx) => {
                     match bound_val {
-                        TypedValue::Keyword(ref kw) => {
-                            if let Some(entid) = self.entid_for_ident(schema, kw) {
+                        TypedValue::Keyword(kw) => {
+                            if let Some(entid) = self.entid_for_ident(schema, &kw) {
                                 self.constrain_column_to_entity(table, column, entid.into());
                             } else {
                                 // Impossible.
@@ -675,8 +671,10 @@ impl ConjoiningClauses {
                         if existing_types.is_empty() &&  // The set is empty: no types are possible.
                            self.empty_because.is_some()
                         {
-                            panic!("Uh oh: we failed this pattern, probably because {:?} couldn't match, but now we're broadening its type.",
-                                   e.key());
+                            panic!(
+                                "Uh oh: we failed this pattern, probably because {:?} couldn't match, but now we're broadening its type.",
+                                e.key()
+                            );
                         }
                         new = existing_types.union(new_types);
                     }
@@ -745,7 +743,7 @@ impl ConjoiningClauses {
         // If it's a variable, record that it has the right type.
         // Ident or attribute resolution errors (the only other check we need to do) will be done
         // by the caller.
-        if let EvolvedNonValuePlace::Variable(ref v) = value {
+        if let EvolvedNonValuePlace::Variable(v) = value {
             self.constrain_var_to_type(v.clone(), ValueType::Ref)
         }
     }
@@ -811,7 +809,7 @@ impl ConjoiningClauses {
         Ok(match value {
             // TODO: see if the variable is projected, aggregated, or compared elsewhere in
             // the query. If it's not, we don't need to use all_datoms here.
-            EvolvedValuePlace::Variable(ref v) => {
+            EvolvedValuePlace::Variable(v) => {
                 // If `required_types` and `known_types` don't exclude strings,
                 // we need to query `all_datoms`.
                 if self
@@ -851,7 +849,7 @@ impl ConjoiningClauses {
             // TODO: In a prepared context, defer this decision until a second algebrizing phase.
             // #278.
             EvolvedNonValuePlace::Placeholder => self.table_for_unknown_attribute(value),
-            EvolvedNonValuePlace::Variable(ref v) => {
+            EvolvedNonValuePlace::Variable(v) => {
                 // See if we have a binding for the variable.
                 match self.bound_value(v) {
                     // TODO: In a prepared context, defer this decision until a second algebrizing phase.
@@ -862,11 +860,11 @@ impl ConjoiningClauses {
                     {
                         self.table_for_places(schema, &EvolvedNonValuePlace::Entid(id), value)
                     }
-                    Some(TypedValue::Keyword(ref kw)) =>
+                    Some(TypedValue::Keyword(kw)) =>
                     // Don't recurse: avoid needing to clone the keyword.
                     {
                         schema
-                            .attribute_for_ident(kw)
+                            .attribute_for_ident(&kw)
                             .ok_or_else(|| EmptyBecause::InvalidAttributeIdent(kw.cloned()))
                             .and_then(|(attribute, _entid)| {
                                 self.table_for_attribute_and_value(attribute, value)
@@ -917,7 +915,7 @@ impl ConjoiningClauses {
         match value {
             // We know this one is known if the attribute lookup succeeds…
             TypedValue::Ref(id) => schema.attribute_for_entid(*id),
-            TypedValue::Keyword(ref kw) => schema.attribute_for_ident(kw).map(|(a, _id)| a),
+            TypedValue::Keyword(kw) => schema.attribute_for_ident(kw).map(|(a, _id)| a),
             _ => None,
         }
     }
@@ -927,19 +925,19 @@ impl ConjoiningClauses {
         schema: &'s Schema,
         pattern: &'a EvolvedPattern,
     ) -> Option<&'s Attribute> {
-        match pattern.attribute {
+        match &pattern.attribute {
             EvolvedNonValuePlace::Entid(id) =>
             // We know this one is known if the attribute lookup succeeds…
             {
-                schema.attribute_for_entid(id)
+                schema.attribute_for_entid(*id)
             }
-            EvolvedNonValuePlace::Variable(ref var) =>
+            EvolvedNonValuePlace::Variable(var) =>
             // If the pattern has a variable, we've already determined that the binding -- if
             // any -- is acceptable and yields a table. Here, simply look to see if it names
             // an attribute so we can find out the type.
             {
                 self.value_bindings
-                    .get(var)
+                    .get(&var)
                     .and_then(|val| self.get_attribute_for_value(schema, val))
             }
             EvolvedNonValuePlace::Placeholder => None,
@@ -1123,7 +1121,7 @@ impl ConjoiningClauses {
     }
 
     fn mark_as_ref(&mut self, pos: &PatternNonValuePlace) {
-        if let PatternNonValuePlace::Variable(ref var) = pos {
+        if let PatternNonValuePlace::Variable(var) = pos {
             self.constrain_var_to_type(var.clone(), ValueType::Ref)
         }
     }
@@ -1136,13 +1134,13 @@ impl ConjoiningClauses {
         // We apply (top level) type predicates first as an optimization.
         for clause in where_clauses.iter() {
             match clause {
-                WhereClause::TypeAnnotation(ref anno) => {
+                WhereClause::TypeAnnotation(anno) => {
                     self.apply_type_anno(anno)?;
                 }
 
                 // Patterns are common, so let's grab as much type information from
                 // them as we can.
-                WhereClause::Pattern(ref p) => {
+                WhereClause::Pattern(p) => {
                     self.mark_as_ref(&p.entity);
                     self.mark_as_ref(&p.attribute);
                     self.mark_as_ref(&p.tx);

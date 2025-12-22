@@ -18,7 +18,7 @@ use edn::entities::Entity;
 use edn::symbols;
 use edn::types::Value;
 
-use core_traits::{values, TypedValue};
+use core_traits::{TypedValue, values};
 
 use crate::schema::SchemaBuilding;
 use crate::types::{Partition, PartitionMap};
@@ -256,21 +256,21 @@ fn symbolic_schema_to_triples(
     // Failure here is a coding error, not a runtime error.
     let mut triples: Vec<(symbols::Keyword, symbols::Keyword, TypedValue)> = vec![];
     // TODO: Consider `flat_map` and `map` rather than loop.
-    match *symbolic_schema {
-        Value::Map(ref m) => {
+    match symbolic_schema {
+        Value::Map(m) => {
             for (ident, mp) in m {
                 let ident = match ident {
-                    Value::Keyword(ref ident) => ident,
+                    Value::Keyword(ident) => ident,
                     _ => bail!(DbErrorKind::BadBootstrapDefinition(format!(
                         "Expected namespaced keyword for ident but got '{:?}'",
                         ident
                     ))),
                 };
-                match *mp {
-                    Value::Map(ref mpp) => {
+                match mp {
+                    Value::Map(mpp) => {
                         for (attr, value) in mpp {
                             let attr = match attr {
-                                Value::Keyword(ref attr) => attr,
+                                Value::Keyword(attr) => attr,
                                 _ => bail!(DbErrorKind::BadBootstrapDefinition(format!(
                                     "Expected namespaced keyword for attr but got '{:?}'",
                                     attr
@@ -315,11 +315,11 @@ fn symbolic_schema_to_triples(
 fn symbolic_schema_to_assertions(symbolic_schema: &Value) -> Result<Vec<Value>> {
     // Failure here is a coding error, not a runtime error.
     let mut assertions: Vec<Value> = vec![];
-    match *symbolic_schema {
-        Value::Map(ref m) => {
+    match symbolic_schema {
+        Value::Map(m) => {
             for (ident, mp) in m {
-                match *mp {
-                    Value::Map(ref mpp) => {
+                match mp {
+                    Value::Map(mpp) => {
                         for (attr, value) in mpp {
                             assertions.push(Value::Vector(vec![
                                 values::DB_ADD.clone(),

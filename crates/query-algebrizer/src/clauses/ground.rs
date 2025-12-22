@@ -228,7 +228,7 @@ impl ConjoiningClauses {
                     .iter()
                     .map(|x| match x {
                         VariableOrPlaceholder::Placeholder => None,
-                        VariableOrPlaceholder::Variable(ref v) => {
+                        VariableOrPlaceholder::Variable(v) => {
                             Some((v.clone(), self.known_type_set(v)))
                         }
                     })
@@ -271,7 +271,7 @@ impl ConjoiningClauses {
                                 // Convert each item in the row.
                                 // If any value in the row is impossible, then skip the row.
                                 // If all rows are impossible, fail the entire CC.
-                                if let Some(ref pair) = pair {
+                                if let Some(pair) = pair {
                                     match self.typed_value_from_arg(schema, &pair.0, col, pair.1)? {
                                         ValueConversion::Val(tv) => vals.push(tv),
                                         ValueConversion::Impossible(because) => {

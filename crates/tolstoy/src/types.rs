@@ -23,7 +23,7 @@ pub struct LocalGlobalTxMapping<'a> {
 }
 
 impl<'a> From<(Entid, &'a Uuid)> for LocalGlobalTxMapping<'a> {
-    fn from((local, remote): (Entid, &'a Uuid)) -> LocalGlobalTxMapping<'_> {
+    fn from((local, remote): (Entid, &'a Uuid)) -> LocalGlobalTxMapping<'a> {
         LocalGlobalTxMapping { local, remote }
     }
 }

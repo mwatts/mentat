@@ -53,9 +53,9 @@ use crate::db;
 use crate::db::MentatStoring;
 use crate::entids;
 use crate::internal_types::{
-    replace_lookup_ref, AEVTrie, AddAndRetract, KnownEntidOr, LookupRef, LookupRefOrTempId,
-    TempIdHandle, TempIdMap, Term, TermWithTempIds, TermWithTempIdsAndLookupRefs,
-    TermWithoutTempIds, TypedValueOr,
+    AEVTrie, AddAndRetract, KnownEntidOr, LookupRef, LookupRefOrTempId, TempIdHandle, TempIdMap,
+    Term, TermWithTempIds, TermWithTempIdsAndLookupRefs, TermWithoutTempIds, TypedValueOr,
+    replace_lookup_ref,
 };
 use db_traits::errors;
 use db_traits::errors::{DbErrorKind, Result};
@@ -63,7 +63,7 @@ use edn::{InternSet, Keyword};
 
 use mentat_core::util::Either;
 
-use core_traits::{attribute, now, Attribute, Entid, KnownEntid, TypedValue, ValueType};
+use core_traits::{Attribute, Entid, KnownEntid, TypedValue, ValueType, attribute, now};
 
 use mentat_core::{DateTime, Schema, TxReport, Utc};
 
@@ -200,7 +200,7 @@ where
         // Errors.  BTree* since we want deterministic results.
         let mut conflicting_upserts: BTreeMap<TempId, BTreeSet<KnownEntid>> = BTreeMap::default();
 
-        for &(ref tempid, ref av_pair) in temp_id_avs {
+        for (tempid, av_pair) in temp_id_avs {
             trace!(
                 "tempid {:?} av_pair {:?} -> {:?}",
                 tempid,
@@ -211,7 +211,7 @@ where
                 if let Some(previous) = tempids.insert(tempid.clone(), entid) {
                     if entid != previous {
                         conflicting_upserts
-                            .entry((**tempid).clone())
+                            .entry((*tempid.as_ref()).clone())
                             .or_insert_with(|| once(previous).collect::<BTreeSet<_>>())
                             .insert(entid);
                     }
@@ -287,10 +287,10 @@ where
                 &mut self,
                 lookup_ref: &entmod::LookupRef<W>,
             ) -> Result<LookupRef> {
-                let lr_a: i64 = match lookup_ref.a {
-                    AttributePlace::Entid(entmod::EntidOrIdent::Entid(ref a)) => *a,
-                    AttributePlace::Entid(entmod::EntidOrIdent::Ident(ref a)) => {
-                        self.schema.require_entid(&a)?.into()
+                let lr_a: i64 = match &lookup_ref.a {
+                    AttributePlace::Entid(entmod::EntidOrIdent::Entid(a)) => *a,
+                    AttributePlace::Entid(entmod::EntidOrIdent::Ident(a)) => {
+                        self.schema.require_entid(a)?.into()
                     }
                 };
                 let lr_attribute: &Attribute = self.schema.require_attribute_for_entid(lr_a)?;
@@ -322,9 +322,9 @@ where
             ) -> Result<KnownEntidOr<LookupRefOrTempId>> {
                 match x {
                     entmod::EntityPlace::Entid(e) => {
-                        let e = match e {
-                            entmod::EntidOrIdent::Entid(ref e) => self.ensure_entid_exists(*e)?,
-                            entmod::EntidOrIdent::Ident(ref e) => self.ensure_ident_exists(&e)?,
+                        let e = match &e {
+                            entmod::EntidOrIdent::Entid(e) => self.ensure_entid_exists(*e)?,
+                            entmod::EntidOrIdent::Ident(e) => self.ensure_ident_exists(e)?,
                         };
                         Ok(Either::Left(e))
                     }
@@ -350,9 +350,9 @@ where
             }
 
             fn entity_a_into_term_a(&mut self, x: entmod::EntidOrIdent) -> Result<Entid> {
-                let a = match x {
-                    entmod::EntidOrIdent::Entid(ref a) => *a,
-                    entmod::EntidOrIdent::Ident(ref a) => self.schema.require_entid(&a)?.into(),
+                let a = match &x {
+                    entmod::EntidOrIdent::Entid(a) => *a,
+                    entmod::EntidOrIdent::Ident(a) => self.schema.require_entid(a)?.into(),
                 };
                 Ok(a)
             }
@@ -379,7 +379,10 @@ where
                         let forward_attribute =
                             self.schema.require_attribute_for_entid(forward_a)?;
                         if forward_attribute.value_type != ValueType::Ref {
-                            bail!(DbErrorKind::NotYetImplemented(format!("Cannot use :attr/_reversed notation for attribute {} that is not :db/valueType :db.type/ref", forward_a)))
+                            bail!(DbErrorKind::NotYetImplemented(format!(
+                                "Cannot use :attr/_reversed notation for attribute {} that is not :db/valueType :db.type/ref",
+                                forward_a
+                            )))
                         }
 
                         match x {
@@ -388,39 +391,60 @@ where
                                 // that the given value is in the attribute's value set, or (in
                                 // limited cases) coerce the value into the attribute's value set.
                                 match v.as_tempid() {
-                                    Some(tempid) => Ok(Either::Right(LookupRefOrTempId::TempId(self.temp_ids.intern(tempid)))),
+                                    Some(tempid) => Ok(Either::Right(LookupRefOrTempId::TempId(
+                                        self.temp_ids.intern(tempid),
+                                    ))),
                                     None => {
-                                        if let TypedValue::Ref(entid) = v.into_typed_value(&self.schema, ValueType::Ref)? {
+                                        if let TypedValue::Ref(entid) =
+                                            v.into_typed_value(&self.schema, ValueType::Ref)?
+                                        {
                                             Ok(Either::Left(KnownEntid(entid)))
                                         } else {
                                             // The given value is expected to be :db.type/ref, so this shouldn't happen.
-                                            bail!(DbErrorKind::NotYetImplemented(format!("Cannot use :attr/_reversed notation for attribute {} with value that is not :db.valueType :db.type/ref", forward_a)))
+                                            bail!(DbErrorKind::NotYetImplemented(format!(
+                                                "Cannot use :attr/_reversed notation for attribute {} with value that is not :db.valueType :db.type/ref",
+                                                forward_a
+                                            )))
                                         }
                                     }
                                 }
-                            },
+                            }
 
-                            entmod::ValuePlace::Entid(entid) =>
-                                Ok(Either::Left(KnownEntid(self.entity_a_into_term_a(entid)?))),
+                            entmod::ValuePlace::Entid(entid) => {
+                                Ok(Either::Left(KnownEntid(self.entity_a_into_term_a(entid)?)))
+                            }
 
-                            entmod::ValuePlace::TempId(tempid) =>
-                                Ok(Either::Right(LookupRefOrTempId::TempId(self.temp_ids.intern(tempid)))),
+                            entmod::ValuePlace::TempId(tempid) => Ok(Either::Right(
+                                LookupRefOrTempId::TempId(self.temp_ids.intern(tempid)),
+                            )),
 
-                            entmod::ValuePlace::LookupRef(ref lookup_ref) =>
-                                Ok(Either::Right(LookupRefOrTempId::LookupRef(self.intern_lookup_ref(lookup_ref)?))),
+                            entmod::ValuePlace::LookupRef(ref lookup_ref) => Ok(Either::Right(
+                                LookupRefOrTempId::LookupRef(self.intern_lookup_ref(lookup_ref)?),
+                            )),
 
                             entmod::ValuePlace::TxFunction(ref tx_function) => {
                                 match tx_function.op.0.as_str() {
                                     "transaction-tx" => Ok(Either::Left(KnownEntid(self.tx_id.0))),
-                                    unknown=> bail!(DbErrorKind::NotYetImplemented(format!("Unknown transaction function {}", unknown))),
+                                    unknown => bail!(DbErrorKind::NotYetImplemented(format!(
+                                        "Unknown transaction function {}",
+                                        unknown
+                                    ))),
                                 }
-                            },
+                            }
 
-                            entmod::ValuePlace::Vector(_) =>
-                                bail!(DbErrorKind::NotYetImplemented(format!("Cannot explode vector value in :attr/_reversed notation for attribute {}", forward_a))),
+                            entmod::ValuePlace::Vector(_) => {
+                                bail!(DbErrorKind::NotYetImplemented(format!(
+                                    "Cannot explode vector value in :attr/_reversed notation for attribute {}",
+                                    forward_a
+                                )))
+                            }
 
-                            entmod::ValuePlace::MapNotation(_) =>
-                                bail!(DbErrorKind::NotYetImplemented(format!("Cannot explode map notation value in :attr/_reversed notation for attribute {}", forward_a))),
+                            entmod::ValuePlace::MapNotation(_) => {
+                                bail!(DbErrorKind::NotYetImplemented(format!(
+                                    "Cannot explode map notation value in :attr/_reversed notation for attribute {}",
+                                    forward_a
+                                )))
+                            }
                         }
                     }
                 }
@@ -508,7 +532,10 @@ where
 
                             entmod::ValuePlace::LookupRef(ref lookup_ref) => {
                                 if attribute.value_type != ValueType::Ref {
-                                    bail!(DbErrorKind::NotYetImplemented(format!("Cannot resolve value lookup ref for attribute {} that is not :db/valueType :db.type/ref", a)))
+                                    bail!(DbErrorKind::NotYetImplemented(format!(
+                                        "Cannot resolve value lookup ref for attribute {} that is not :db/valueType :db.type/ref",
+                                        a
+                                    )))
                                 }
 
                                 Either::Right(LookupRefOrTempId::LookupRef(
@@ -532,8 +559,12 @@ where
                                 // value can be used where a double is expected.  See also
                                 // `SchemaTypeChecking.to_typed_value(...)`.
                                 if attribute.value_type != typed_value.value_type() {
-                                    bail!(DbErrorKind::NotYetImplemented(format!("Transaction function {} produced value of type {} but expected type {}",
-                                                                               tx_function.op.0.as_str(), typed_value.value_type(), attribute.value_type)));
+                                    bail!(DbErrorKind::NotYetImplemented(format!(
+                                        "Transaction function {} produced value of type {} but expected type {}",
+                                        tx_function.op.0.as_str(),
+                                        typed_value.value_type(),
+                                        attribute.value_type
+                                    )));
                                 }
 
                                 Either::Left(typed_value)
@@ -541,7 +572,10 @@ where
 
                             entmod::ValuePlace::Vector(vs) => {
                                 if !attribute.multival {
-                                    bail!(DbErrorKind::NotYetImplemented(format!("Cannot explode vector value for attribute {} that is not :db.cardinality :db.cardinality/many", a)));
+                                    bail!(DbErrorKind::NotYetImplemented(format!(
+                                        "Cannot explode vector value for attribute {} that is not :db.cardinality :db.cardinality/many",
+                                        a
+                                    )));
                                 }
 
                                 for vv in vs {
@@ -561,11 +595,17 @@ where
                                 // AddOrRetract, which proliferates types and code, or only handling
                                 // nested maps rather than map values, like Datomic does.
                                 if op != OpType::Add {
-                                    bail!(DbErrorKind::NotYetImplemented(format!("Cannot explode nested map value in :db/retract for attribute {}", a)));
+                                    bail!(DbErrorKind::NotYetImplemented(format!(
+                                        "Cannot explode nested map value in :db/retract for attribute {}",
+                                        a
+                                    )));
                                 }
 
                                 if attribute.value_type != ValueType::Ref {
-                                    bail!(DbErrorKind::NotYetImplemented(format!("Cannot explode nested map value for attribute {} that is not :db/valueType :db.type/ref", a)))
+                                    bail!(DbErrorKind::NotYetImplemented(format!(
+                                        "Cannot explode nested map value for attribute {} that is not :db/valueType :db.type/ref",
+                                        a
+                                    )))
                                 }
 
                                 // :db/id is optional; if it's not given, we generate a special internal tempid
@@ -633,7 +673,10 @@ where
                                 }
 
                                 if dangling {
-                                    bail!(DbErrorKind::NotYetImplemented(format!("Cannot explode nested map value that would lead to dangling entity for attribute {}", a)));
+                                    bail!(DbErrorKind::NotYetImplemented(format!(
+                                        "Cannot explode nested map value that would lead to dangling entity for attribute {}",
+                                        a
+                                    )));
                                 }
 
                                 in_process.entity_e_into_term_v(db_id)?

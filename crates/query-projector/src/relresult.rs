@@ -52,7 +52,7 @@ impl<T> RelResult<T> {
         self.values.len() / self.width
     }
 
-    pub fn rows(&self) -> ::std::slice::Chunks<T> {
+    pub fn rows(&self) -> ::std::slice::Chunks<'_, T> {
         // TODO(gburd): Nightly-only API `exact_chunks`. #47115.
         self.values.chunks(self.width)
     }

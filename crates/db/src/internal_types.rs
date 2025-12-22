@@ -50,11 +50,11 @@ impl TransactableValue for ValueAndSpan {
                 let mut it = ls.iter();
                 match (it.next().map(|x| &x.inner), it.next(), it.next(), it.next()) {
                     // Like "(transaction-id)".
-                    (Some(&PlainSymbol(ref op)), None, None, None) => {
+                    (Some(PlainSymbol(op)), None, None, None) => {
                         Ok(EntityPlace::TxFunction(TxFunction { op: op.clone() }))
                     }
                     // Like "(lookup-ref)".
-                    (Some(&PlainSymbol(edn::PlainSymbol(ref s))), Some(a), Some(v), None)
+                    (Some(PlainSymbol(edn::PlainSymbol(s))), Some(a), Some(v), None)
                         if s == "lookup-ref" =>
                     {
                         match a.clone().into_entity_place()? {
@@ -114,7 +114,7 @@ impl TransactableValue for TypedValue {
 
     fn as_tempid(&self) -> Option<TempId> {
         match self {
-            TypedValue::String(ref s) => Some(TempId::External((**s).clone())),
+            TypedValue::String(s) => Some(TempId::External((**s).clone())),
             _ => None,
         }
     }

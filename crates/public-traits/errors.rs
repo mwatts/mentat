@@ -9,6 +9,9 @@
 // specific language governing permissions and limitations under the License.
 
 #![allow(dead_code)]
+// The failure_derive macro generates non-local impl definitions.
+// TODO: Migrate from failure to thiserror.
+#![allow(non_local_definitions)]
 
 use std; // To refer to std::result::Result.
 

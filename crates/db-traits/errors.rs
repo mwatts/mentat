@@ -9,6 +9,9 @@
 // specific language governing permissions and limitations under the License.
 
 #![allow(dead_code)]
+// The failure_derive macro generates non-local impl definitions.
+// TODO: Migrate from failure to thiserror.
+#![allow(non_local_definitions)]
 
 use failure::{Backtrace, Context, Fail};
 
@@ -70,7 +73,7 @@ impl ::std::fmt::Display for SchemaConstraintViolation {
         use self::SchemaConstraintViolation::*;
         match self {
             ConflictingUpserts {
-                ref conflicting_upserts,
+                conflicting_upserts,
             } => {
                 writeln!(f, "conflicting upserts:")?;
                 for (tempid, entids) in conflicting_upserts {
@@ -78,11 +81,9 @@ impl ::std::fmt::Display for SchemaConstraintViolation {
                 }
                 Ok(())
             }
-            TypeDisagreements {
-                ref conflicting_datoms,
-            } => {
+            TypeDisagreements { conflicting_datoms } => {
                 writeln!(f, "type disagreements:")?;
-                for (ref datom, expected_type) in conflicting_datoms {
+                for (datom, expected_type) in conflicting_datoms {
                     writeln!(
                         f,
                         "  expected value of type {} but got datom [{} {} {:?}]",
@@ -91,7 +92,7 @@ impl ::std::fmt::Display for SchemaConstraintViolation {
                 }
                 Ok(())
             }
-            CardinalityConflicts { ref conflicts } => {
+            CardinalityConflicts { conflicts } => {
                 writeln!(f, "cardinality conflicts:")?;
                 for conflict in conflicts {
                     writeln!(f, "  {:?}", conflict)?;
@@ -117,7 +118,10 @@ impl ::std::fmt::Display for InputError {
         use self::InputError::*;
         match self {
             BadDbId => {
-                writeln!(f, ":db/id in map notation must either not be present or be an entid, an ident, or a tempid")
+                writeln!(
+                    f,
+                    ":db/id in map notation must either not be present or be an entid, an ident, or a tempid"
+                )
             }
             BadEntityPlace => {
                 writeln!(f, "cannot convert value place into entity place")

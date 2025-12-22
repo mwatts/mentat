@@ -612,7 +612,7 @@ impl ConjoiningClauses {
         let mut new_value: Option<EvolvedValuePlace> = None;
 
         match &pattern.entity {
-            EvolvedNonValuePlace::Variable(ref var) => {
+            EvolvedNonValuePlace::Variable(var) => {
                 // See if we have it yet!
                 match self.bound_value(&var) {
                     None => (),
@@ -631,7 +631,7 @@ impl ConjoiningClauses {
             _ => (),
         }
         match &pattern.value {
-            EvolvedValuePlace::Variable(ref var) => {
+            EvolvedValuePlace::Variable(var) => {
                 // See if we have it yet!
                 match self.bound_value(&var) {
                     None => (),
@@ -696,7 +696,7 @@ mod testing {
 
     use edn::query::{Keyword, Variable};
 
-    use crate::clauses::{add_attribute, associate_ident, ident, QueryInputs};
+    use crate::clauses::{QueryInputs, add_attribute, associate_ident, ident};
 
     use crate::types::{
         Column, ColumnConstraint, DatomsTable, QualifiedAlias, QueryValue, SourceAlias,

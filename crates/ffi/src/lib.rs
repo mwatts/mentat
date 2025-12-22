@@ -300,7 +300,7 @@ pub unsafe extern "C" fn in_progress_rollback<'m>(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn in_progress_builder<'m>(
     in_progress: *mut InProgress<'m, 'm>,
-) -> *mut InProgressBuilder {
+) -> *mut InProgressBuilder<'m, 'm> {
     assert_not_null!(in_progress);
     let in_progress = Box::from_raw(in_progress);
     Box::into_raw(Box::new(in_progress.builder()))
@@ -318,7 +318,7 @@ pub unsafe extern "C" fn in_progress_builder<'m>(
 pub unsafe extern "C" fn in_progress_entity_builder_from_temp_id<'m>(
     in_progress: *mut InProgress<'m, 'm>,
     temp_id: *const c_char,
-) -> *mut EntityBuilder<InProgressBuilder> {
+) -> *mut EntityBuilder<InProgressBuilder<'m, 'm>> {
     assert_not_null!(in_progress);
     let in_progress = Box::from_raw(in_progress);
     let temp_id = c_char_to_string(temp_id);
@@ -337,7 +337,7 @@ pub unsafe extern "C" fn in_progress_entity_builder_from_temp_id<'m>(
 pub unsafe extern "C" fn in_progress_entity_builder_from_entid<'m>(
     in_progress: *mut InProgress<'m, 'm>,
     entid: c_longlong,
-) -> *mut EntityBuilder<InProgressBuilder> {
+) -> *mut EntityBuilder<InProgressBuilder<'m, 'm>> {
     assert_not_null!(in_progress);
     let in_progress = Box::from_raw(in_progress);
     Box::into_raw(Box::new(in_progress.builder().describe(KnownEntid(entid))))

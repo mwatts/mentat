@@ -34,7 +34,7 @@ use crate::entids;
 use db_traits::errors::{DbErrorKind, Result};
 use edn::symbols;
 
-use core_traits::{attribute, Entid, TypedValue, ValueType};
+use core_traits::{Entid, TypedValue, ValueType, attribute};
 
 use mentat_core::{AttributeMap, Schema};
 
@@ -181,124 +181,181 @@ pub fn update_attribute_map_from_entid_triples(
 
     // For retractions, we start with an attribute builder that's pre-populated with the existing
     // attribute values. That allows us to check existing values and unset them.
-    for (entid, attr, ref value) in retractions {
+    for (entid, attr, value) in retractions {
         let builder = builders
             .entry(entid)
             .or_insert_with(|| attribute_builder_to_modify(entid, attribute_map));
         match attr {
             // You can only retract :db/unique, :db/isComponent; all others must be altered instead
             // of retracted, or are not allowed to change.
-            entids::DB_IS_COMPONENT => {
-                match value {
-                    &TypedValue::Boolean(v) if builder.component == Some(v) => {
-                        builder.component(false);
-                    },
+            entids::DB_IS_COMPONENT => match value {
+                TypedValue::Boolean(v) if builder.component == Some(v) => {
+                    builder.component(false);
+                }
+                v => {
+                    bail!(DbErrorKind::BadSchemaAssertion(format!(
+                        "Attempted to retract :db/isComponent with the wrong value {:?}.",
+                        v
+                    )));
+                }
+            },
+
+            entids::DB_UNIQUE => match value {
+                TypedValue::Ref(u) => match u {
+                    entids::DB_UNIQUE_VALUE
+                        if builder.unique == Some(Some(attribute::Unique::Value)) =>
+                    {
+                        builder.non_unique();
+                    }
+                    entids::DB_UNIQUE_IDENTITY
+                        if builder.unique == Some(Some(attribute::Unique::Identity)) =>
+                    {
+                        builder.non_unique();
+                    }
                     v => {
-                        bail!(DbErrorKind::BadSchemaAssertion(format!("Attempted to retract :db/isComponent with the wrong value {:?}.", v)));
-                    },
-                }
+                        bail!(DbErrorKind::BadSchemaAssertion(format!(
+                            "Attempted to retract :db/unique with the wrong value {}.",
+                            v
+                        )));
+                    }
+                },
+                _ => bail!(DbErrorKind::BadSchemaAssertion(format!(
+                    "Expected [:db/retract _ :db/unique :db.unique/_] but got [:db/retract {} :db/unique {:?}]",
+                    entid, value
+                ))),
             },
 
-            entids::DB_UNIQUE => {
-                match *value {
-                    TypedValue::Ref(u) => {
-                        match u {
-                            entids::DB_UNIQUE_VALUE if builder.unique == Some(Some(attribute::Unique::Value)) => {
-                                builder.non_unique();
-                            },
-                            entids::DB_UNIQUE_IDENTITY if builder.unique == Some(Some(attribute::Unique::Identity)) => {
-                                builder.non_unique();
-                            },
-                            v => {
-                                bail!(DbErrorKind::BadSchemaAssertion(format!("Attempted to retract :db/unique with the wrong value {}.", v)));
-                            },
-                        }
-                    },
-                    _ => bail!(DbErrorKind::BadSchemaAssertion(format!("Expected [:db/retract _ :db/unique :db.unique/_] but got [:db/retract {} :db/unique {:?}]", entid, value)))
-                }
-            },
-
-            entids::DB_VALUE_TYPE |
-            entids::DB_CARDINALITY |
-            entids::DB_INDEX |
-            entids::DB_FULLTEXT |
-            entids::DB_NO_HISTORY => {
-                bail!(DbErrorKind::BadSchemaAssertion(format!("Retracting attribute {} for entity {} not permitted.", attr, entid)));
-            },
+            entids::DB_VALUE_TYPE
+            | entids::DB_CARDINALITY
+            | entids::DB_INDEX
+            | entids::DB_FULLTEXT
+            | entids::DB_NO_HISTORY => {
+                bail!(DbErrorKind::BadSchemaAssertion(format!(
+                    "Retracting attribute {} for entity {} not permitted.",
+                    attr, entid
+                )));
+            }
 
             _ => {
-                bail!(DbErrorKind::BadSchemaAssertion(format!("Do not recognize attribute {} for entid {}", attr, entid)))
+                bail!(DbErrorKind::BadSchemaAssertion(format!(
+                    "Do not recognize attribute {} for entid {}",
+                    attr, entid
+                )))
             }
         }
     }
 
-    for (entid, attr, ref value) in assertions.into_iter() {
+    for (entid, attr, value) in assertions.into_iter() {
         // For assertions, we can start with an empty attribute builder.
         let builder = builders.entry(entid).or_insert_with(Default::default);
 
         // TODO: improve error messages throughout.
         match attr {
-            entids::DB_VALUE_TYPE => {
-                match *value {
-                    TypedValue::Ref(entids::DB_TYPE_BOOLEAN) => { builder.value_type(ValueType::Boolean); },
-                    TypedValue::Ref(entids::DB_TYPE_DOUBLE)  => { builder.value_type(ValueType::Double); },
-                    TypedValue::Ref(entids::DB_TYPE_INSTANT) => { builder.value_type(ValueType::Instant); },
-                    TypedValue::Ref(entids::DB_TYPE_KEYWORD) => { builder.value_type(ValueType::Keyword); },
-                    TypedValue::Ref(entids::DB_TYPE_LONG)    => { builder.value_type(ValueType::Long); },
-                    TypedValue::Ref(entids::DB_TYPE_REF)     => { builder.value_type(ValueType::Ref); },
-                    TypedValue::Ref(entids::DB_TYPE_STRING)  => { builder.value_type(ValueType::String); },
-                    TypedValue::Ref(entids::DB_TYPE_UUID)    => { builder.value_type(ValueType::Uuid); },
-                    TypedValue::Ref(entids::DB_TYPE_BYTES)   => { builder.value_type(ValueType::Bytes); },
-                    _ => bail!(DbErrorKind::BadSchemaAssertion(format!("Expected [... :db/valueType :db.type/*] but got [... :db/valueType {:?}] for entid {} and attribute {}", value, entid, attr)))
+            entids::DB_VALUE_TYPE => match value {
+                TypedValue::Ref(entids::DB_TYPE_BOOLEAN) => {
+                    builder.value_type(ValueType::Boolean);
                 }
+                TypedValue::Ref(entids::DB_TYPE_DOUBLE) => {
+                    builder.value_type(ValueType::Double);
+                }
+                TypedValue::Ref(entids::DB_TYPE_INSTANT) => {
+                    builder.value_type(ValueType::Instant);
+                }
+                TypedValue::Ref(entids::DB_TYPE_KEYWORD) => {
+                    builder.value_type(ValueType::Keyword);
+                }
+                TypedValue::Ref(entids::DB_TYPE_LONG) => {
+                    builder.value_type(ValueType::Long);
+                }
+                TypedValue::Ref(entids::DB_TYPE_REF) => {
+                    builder.value_type(ValueType::Ref);
+                }
+                TypedValue::Ref(entids::DB_TYPE_STRING) => {
+                    builder.value_type(ValueType::String);
+                }
+                TypedValue::Ref(entids::DB_TYPE_UUID) => {
+                    builder.value_type(ValueType::Uuid);
+                }
+                TypedValue::Ref(entids::DB_TYPE_BYTES) => {
+                    builder.value_type(ValueType::Bytes);
+                }
+                _ => bail!(DbErrorKind::BadSchemaAssertion(format!(
+                    "Expected [... :db/valueType :db.type/*] but got [... :db/valueType {:?}] for entid {} and attribute {}",
+                    value, entid, attr
+                ))),
             },
 
-            entids::DB_CARDINALITY => {
-                match *value {
-                    TypedValue::Ref(entids::DB_CARDINALITY_MANY) => { builder.multival(true); },
-                    TypedValue::Ref(entids::DB_CARDINALITY_ONE) => { builder.multival(false); },
-                    _ => bail!(DbErrorKind::BadSchemaAssertion(format!("Expected [... :db/cardinality :db.cardinality/many|:db.cardinality/one] but got [... :db/cardinality {:?}]", value)))
+            entids::DB_CARDINALITY => match value {
+                TypedValue::Ref(entids::DB_CARDINALITY_MANY) => {
+                    builder.multival(true);
                 }
+                TypedValue::Ref(entids::DB_CARDINALITY_ONE) => {
+                    builder.multival(false);
+                }
+                _ => bail!(DbErrorKind::BadSchemaAssertion(format!(
+                    "Expected [... :db/cardinality :db.cardinality/many|:db.cardinality/one] but got [... :db/cardinality {:?}]",
+                    value
+                ))),
             },
 
-            entids::DB_UNIQUE => {
-                match *value {
-                    TypedValue::Ref(entids::DB_UNIQUE_VALUE) => { builder.unique(attribute::Unique::Value); },
-                    TypedValue::Ref(entids::DB_UNIQUE_IDENTITY) => { builder.unique(attribute::Unique::Identity); },
-                    _ => bail!(DbErrorKind::BadSchemaAssertion(format!("Expected [... :db/unique :db.unique/value|:db.unique/identity] but got [... :db/unique {:?}]", value)))
+            entids::DB_UNIQUE => match value {
+                TypedValue::Ref(entids::DB_UNIQUE_VALUE) => {
+                    builder.unique(attribute::Unique::Value);
                 }
+                TypedValue::Ref(entids::DB_UNIQUE_IDENTITY) => {
+                    builder.unique(attribute::Unique::Identity);
+                }
+                _ => bail!(DbErrorKind::BadSchemaAssertion(format!(
+                    "Expected [... :db/unique :db.unique/value|:db.unique/identity] but got [... :db/unique {:?}]",
+                    value
+                ))),
             },
 
-            entids::DB_INDEX => {
-                match *value {
-                    TypedValue::Boolean(x) => { builder.index(x); },
-                    _ => bail!(DbErrorKind::BadSchemaAssertion(format!("Expected [... :db/index true|false] but got [... :db/index {:?}]", value)))
+            entids::DB_INDEX => match value {
+                TypedValue::Boolean(x) => {
+                    builder.index(x);
                 }
+                _ => bail!(DbErrorKind::BadSchemaAssertion(format!(
+                    "Expected [... :db/index true|false] but got [... :db/index {:?}]",
+                    value
+                ))),
             },
 
-            entids::DB_FULLTEXT => {
-                match *value {
-                    TypedValue::Boolean(x) => { builder.fulltext(x); },
-                    _ => bail!(DbErrorKind::BadSchemaAssertion(format!("Expected [... :db/fulltext true|false] but got [... :db/fulltext {:?}]", value)))
+            entids::DB_FULLTEXT => match value {
+                TypedValue::Boolean(x) => {
+                    builder.fulltext(x);
                 }
+                _ => bail!(DbErrorKind::BadSchemaAssertion(format!(
+                    "Expected [... :db/fulltext true|false] but got [... :db/fulltext {:?}]",
+                    value
+                ))),
             },
 
-            entids::DB_IS_COMPONENT => {
-                match *value {
-                    TypedValue::Boolean(x) => { builder.component(x); },
-                    _ => bail!(DbErrorKind::BadSchemaAssertion(format!("Expected [... :db/isComponent true|false] but got [... :db/isComponent {:?}]", value)))
+            entids::DB_IS_COMPONENT => match value {
+                TypedValue::Boolean(x) => {
+                    builder.component(x);
                 }
+                _ => bail!(DbErrorKind::BadSchemaAssertion(format!(
+                    "Expected [... :db/isComponent true|false] but got [... :db/isComponent {:?}]",
+                    value
+                ))),
             },
 
-            entids::DB_NO_HISTORY => {
-                match *value {
-                    TypedValue::Boolean(x) => { builder.no_history(x); },
-                    _ => bail!(DbErrorKind::BadSchemaAssertion(format!("Expected [... :db/noHistory true|false] but got [... :db/noHistory {:?}]", value)))
+            entids::DB_NO_HISTORY => match value {
+                TypedValue::Boolean(x) => {
+                    builder.no_history(x);
                 }
+                _ => bail!(DbErrorKind::BadSchemaAssertion(format!(
+                    "Expected [... :db/noHistory true|false] but got [... :db/noHistory {:?}]",
+                    value
+                ))),
             },
 
             _ => {
-                bail!(DbErrorKind::BadSchemaAssertion(format!("Do not recognize attribute {} for entid {}", attr, entid)))
+                bail!(DbErrorKind::BadSchemaAssertion(format!(
+                    "Do not recognize attribute {} for entid {}",
+                    attr, entid
+                )))
             }
         }
     }
@@ -370,7 +427,7 @@ where
     for (e, a, typed_value, added) in assertions.into_iter() {
         // Here we handle :db/ident assertions.
         if a == entids::DB_IDENT {
-            if let TypedValue::Keyword(ref keyword) = typed_value {
+            if let TypedValue::Keyword(keyword) = typed_value {
                 ident_set.witness(e, keyword.as_ref().clone(), added);
                 continue;
             } else {

@@ -26,7 +26,7 @@ mod validate;
 
 use core_traits::{Entid, TypedValue, ValueType};
 
-use mentat_core::{parse_query, CachedAttributes, Schema};
+use mentat_core::{CachedAttributes, Schema, parse_query};
 
 use mentat_core::counter::RcCounter;
 
@@ -136,8 +136,10 @@ impl<'s, 'c> Known<'s, 'c> {
 
 #[derive(Debug)]
 pub struct AlgebraicQuery {
+    #[allow(dead_code)] // Reserved for future use
     default_source: SrcVar,
     pub find_spec: Rc<FindSpec>,
+    #[allow(dead_code)] // TODO: aggregates not yet implemented
     has_aggregates: bool,
 
     /// The set of variables that the caller wishes to be used for grouping when aggregating.

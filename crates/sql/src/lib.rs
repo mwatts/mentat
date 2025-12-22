@@ -153,7 +153,7 @@ impl QueryBuilder for SQLiteQueryBuilder {
             Instant(dt) => {
                 self.push_sql(format!("{}", dt.to_micros()).as_str()); // TODO: argument instead?
             }
-            Uuid(ref u) => {
+            Uuid(u) => {
                 let bytes = u.as_bytes();
                 if let Some(arg) = self.byte_args.get(bytes.as_ref()).cloned() {
                     // Why, borrow checker, why?!
@@ -167,7 +167,7 @@ impl QueryBuilder for SQLiteQueryBuilder {
             // These are both `Rc`. Unfortunately, we can't use that fact when
             // turning these into rusqlite Values.
             // However, we can check to see whether there's an existing var that matches…
-            String(ref s) => {
+            String(s) => {
                 if let Some(arg) = self.string_args.get(s).cloned() {
                     self.push_named_arg(arg.as_str());
                 } else {
@@ -176,7 +176,7 @@ impl QueryBuilder for SQLiteQueryBuilder {
                     self.string_args.insert(s.clone(), arg);
                 }
             }
-            Keyword(ref s) => {
+            Keyword(s) => {
                 // TODO: intern.
                 let v = Rc::new(rusqlite::types::Value::Text(s.as_ref().to_string()));
                 self.push_static_arg(v);

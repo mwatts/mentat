@@ -8,11 +8,15 @@
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
 
+// The failure_derive macro generates non-local impl definitions.
+// TODO: Migrate from failure to thiserror.
+#![allow(non_local_definitions)]
+
 use std; // To refer to std::result::Result.
 
 use core_traits::{ValueType, ValueTypeSet};
 
-use edn::{query::PlainSymbol, ParseError};
+use edn::{ParseError, query::PlainSymbol};
 
 pub type Result<T> = std::result::Result<T, AlgebrizerError>;
 

@@ -8,6 +8,10 @@
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
 
+// The failure_derive macro generates non-local impl definitions.
+// TODO: Migrate from failure to thiserror.
+#![allow(non_local_definitions)]
+
 use std; // To refer to std::result::Result.
 
 use rusqlite;

@@ -244,6 +244,7 @@ trait CardinalityOneCache: RemoveFromCache + ClearCache {
     fn get(&self, e: Entid) -> Option<&TypedValue>;
 }
 
+#[allow(dead_code)] // set and get reserved for future use
 trait CardinalityManyCache: RemoveFromCache + ClearCache {
     fn acc(&mut self, e: Entid, v: TypedValue);
     fn set(&mut self, e: Entid, vs: Vec<TypedValue>);
@@ -287,8 +288,8 @@ impl RemoveFromCache for SingleValAttributeCache {
             Occupied(mut entry) => {
                 let removed = entry.insert(None);
                 match removed {
-                    None => {}                  // Already removed.
-                    Some(ref r) if r == v => {} // We removed it!
+                    None => {}               // Already removed.
+                    Some(r) if r == *v => {} // We removed it!
                     r => {
                         eprintln!(
                             "Cache inconsistency: should be ({}, {:?}), was ({}, {:?}).",
@@ -1025,7 +1026,7 @@ impl AttributeCaches {
         attribute: Entid,
         entid: Entid,
     ) -> Option<Option<&TypedValue>> {
-        if let Some(&Some(ref tv)) = self
+        if let Some(Some(tv)) = self
             .value_pairs(schema, attribute)
             .and_then(|c| c.get(&entid))
         {
@@ -1238,10 +1239,7 @@ impl AttributeCaches {
             AttributeSpec::All => {
                 // If we're caching all attributes, there's nothing we can exclude.
             }
-            AttributeSpec::Specified {
-                ref mut non_fts,
-                ref mut fts,
-            } => {
+            AttributeSpec::Specified { non_fts, fts } => {
                 // Remove any attributes for which all entities are present in the cache (even
                 // as a 'miss').
                 let exclude_missing = |vec: &mut Vec<Entid>| {
@@ -1309,7 +1307,7 @@ impl CachedAttributes for AttributeCaches {
         attribute: Entid,
         entid: Entid,
     ) -> Option<&TypedValue> {
-        if let Some(&Some(ref tv)) = self
+        if let Some(Some(tv)) = self
             .value_pairs(schema, attribute)
             .and_then(|c| c.get(&entid))
         {
@@ -1975,7 +1973,7 @@ impl<'a> TransactWatcher for InProgressCacheTransactWatcher<'a> {
                     Either::Left(_) => {
                         // Nothing to do.
                     }
-                    Either::Right(ref mut vec) => {
+                    Either::Right(vec) => {
                         vec.push((e, v.clone()));
                     }
                 }
@@ -2011,7 +2009,7 @@ impl<'a> TransactWatcher for InProgressCacheTransactWatcher<'a> {
 }
 
 impl InProgressSQLiteAttributeCache {
-    pub fn transact_watcher(&mut self) -> InProgressCacheTransactWatcher {
+    pub fn transact_watcher(&mut self) -> InProgressCacheTransactWatcher<'_> {
         InProgressCacheTransactWatcher::new(self)
     }
 }

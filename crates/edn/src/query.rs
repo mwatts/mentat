@@ -72,7 +72,7 @@ pub trait FromValue<T> {
 /// TODO: intern strings. #398.
 impl FromValue<Variable> for Variable {
     fn from_value(v: &crate::ValueAndSpan) -> Option<Variable> {
-        if let crate::SpannedValue::PlainSymbol(ref s) = v.inner {
+        if let crate::SpannedValue::PlainSymbol(s) = &v.inner {
             Variable::from_symbol(s)
         } else {
             None
@@ -116,7 +116,7 @@ pub struct QueryFunction(pub PlainSymbol);
 
 impl FromValue<QueryFunction> for QueryFunction {
     fn from_value(v: &crate::ValueAndSpan) -> Option<QueryFunction> {
-        if let crate::SpannedValue::PlainSymbol(ref s) = v.inner {
+        if let crate::SpannedValue::PlainSymbol(s) = &v.inner {
             QueryFunction::from_symbol(s)
         } else {
             None
@@ -155,7 +155,7 @@ pub enum SrcVar {
 
 impl FromValue<SrcVar> for SrcVar {
     fn from_value(v: &crate::ValueAndSpan) -> Option<SrcVar> {
-        if let crate::SpannedValue::PlainSymbol(ref s) = v.inner {
+        if let crate::SpannedValue::PlainSymbol(s) = &v.inner {
             SrcVar::from_symbol(s)
         } else {
             None
@@ -215,20 +215,18 @@ pub enum FnArg {
 impl FromValue<FnArg> for FnArg {
     fn from_value(v: &crate::ValueAndSpan) -> Option<FnArg> {
         use crate::SpannedValue::*;
-        match v.inner {
-            Integer(x) => Some(FnArg::EntidOrInteger(x)),
-            PlainSymbol(ref x) if x.is_src_symbol() => SrcVar::from_symbol(x).map(FnArg::SrcVar),
-            PlainSymbol(ref x) if x.is_var_symbol() => {
-                Variable::from_symbol(x).map(FnArg::Variable)
-            }
+        match &v.inner {
+            Integer(x) => Some(FnArg::EntidOrInteger(*x)),
+            PlainSymbol(x) if x.is_src_symbol() => SrcVar::from_symbol(x).map(FnArg::SrcVar),
+            PlainSymbol(x) if x.is_var_symbol() => Variable::from_symbol(x).map(FnArg::Variable),
             PlainSymbol(_) => None,
-            Keyword(ref x) => Some(FnArg::IdentOrKeyword(x.clone())),
-            Instant(x) => Some(FnArg::Constant(NonIntegerConstant::Instant(x))),
-            Uuid(x) => Some(FnArg::Constant(NonIntegerConstant::Uuid(x))),
-            Boolean(x) => Some(FnArg::Constant(NonIntegerConstant::Boolean(x))),
-            Float(x) => Some(FnArg::Constant(NonIntegerConstant::Float(x))),
-            BigInteger(ref x) => Some(FnArg::Constant(NonIntegerConstant::BigInteger(x.clone()))),
-            Text(ref x) =>
+            Keyword(x) => Some(FnArg::IdentOrKeyword(x.clone())),
+            Instant(x) => Some(FnArg::Constant(NonIntegerConstant::Instant(*x))),
+            Uuid(x) => Some(FnArg::Constant(NonIntegerConstant::Uuid(*x))),
+            Boolean(x) => Some(FnArg::Constant(NonIntegerConstant::Boolean(*x))),
+            Float(x) => Some(FnArg::Constant(NonIntegerConstant::Float(*x))),
+            BigInteger(x) => Some(FnArg::Constant(NonIntegerConstant::BigInteger(x.clone()))),
+            Text(x) =>
             // TODO: intern strings. #398.
             {
                 Some(FnArg::Constant(x.clone().into()))
@@ -242,8 +240,8 @@ impl FromValue<FnArg> for FnArg {
 impl std::fmt::Display for FnArg {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            FnArg::Variable(ref var) => write!(f, "{}", var),
-            FnArg::SrcVar(ref var) => {
+            FnArg::Variable(var) => write!(f, "{}", var),
+            FnArg::SrcVar(var) => {
                 if var == &SrcVar::DefaultSrc {
                     write!(f, "$")
                 } else {
@@ -251,9 +249,9 @@ impl std::fmt::Display for FnArg {
                 }
             }
             FnArg::EntidOrInteger(entid) => write!(f, "{}", entid),
-            FnArg::IdentOrKeyword(ref kw) => write!(f, "{}", kw),
-            FnArg::Constant(ref constant) => write!(f, "{:?}", constant),
-            FnArg::Vector(ref vec) => write!(f, "{:?}", vec),
+            FnArg::IdentOrKeyword(kw) => write!(f, "{}", kw),
+            FnArg::Constant(constant) => write!(f, "{:?}", constant),
+            FnArg::Vector(vec) => write!(f, "{:?}", vec),
         }
     }
 }
@@ -261,7 +259,7 @@ impl std::fmt::Display for FnArg {
 impl FnArg {
     pub fn as_variable(&self) -> Option<&Variable> {
         match self {
-            FnArg::Variable(ref v) => Some(v),
+            FnArg::Variable(v) => Some(v),
             _ => None,
         }
     }
@@ -306,26 +304,26 @@ impl PatternNonValuePlace {
     }
 
     fn to_pattern_value_place(&self) -> PatternValuePlace {
-        match *self {
+        match self {
             PatternNonValuePlace::Placeholder => PatternValuePlace::Placeholder,
-            PatternNonValuePlace::Variable(ref x) => PatternValuePlace::Variable(x.clone()),
-            PatternNonValuePlace::Entid(x) => PatternValuePlace::EntidOrInteger(x),
-            PatternNonValuePlace::Ident(ref x) => PatternValuePlace::IdentOrKeyword(x.clone()),
+            PatternNonValuePlace::Variable(x) => PatternValuePlace::Variable(x.clone()),
+            PatternNonValuePlace::Entid(x) => PatternValuePlace::EntidOrInteger(*x),
+            PatternNonValuePlace::Ident(x) => PatternValuePlace::IdentOrKeyword(x.clone()),
         }
     }
 }
 
 impl FromValue<PatternNonValuePlace> for PatternNonValuePlace {
     fn from_value(v: &crate::ValueAndSpan) -> Option<PatternNonValuePlace> {
-        match v.inner {
+        match &v.inner {
             crate::SpannedValue::Integer(x) => {
-                if x >= 0 {
-                    Some(PatternNonValuePlace::Entid(x))
+                if *x >= 0 {
+                    Some(PatternNonValuePlace::Entid(*x))
                 } else {
                     None
                 }
             }
-            crate::SpannedValue::PlainSymbol(ref x) => {
+            crate::SpannedValue::PlainSymbol(x) => {
                 if x.0.as_str() == "_" {
                     Some(PatternNonValuePlace::Placeholder)
                 } else if let Some(v) = Variable::from_symbol(x) {
@@ -334,7 +332,7 @@ impl FromValue<PatternNonValuePlace> for PatternNonValuePlace {
                     None
                 }
             }
-            crate::SpannedValue::Keyword(ref x) => Some(x.clone().into()),
+            crate::SpannedValue::Keyword(x) => Some(x.clone().into()),
             _ => None,
         }
     }
@@ -372,33 +370,33 @@ impl From<Keyword> for PatternValuePlace {
 
 impl FromValue<PatternValuePlace> for PatternValuePlace {
     fn from_value(v: &crate::ValueAndSpan) -> Option<PatternValuePlace> {
-        match v.inner {
-            crate::SpannedValue::Integer(x) => Some(PatternValuePlace::EntidOrInteger(x)),
-            crate::SpannedValue::PlainSymbol(ref x) if x.0.as_str() == "_" => {
+        match &v.inner {
+            crate::SpannedValue::Integer(x) => Some(PatternValuePlace::EntidOrInteger(*x)),
+            crate::SpannedValue::PlainSymbol(x) if x.0.as_str() == "_" => {
                 Some(PatternValuePlace::Placeholder)
             }
-            crate::SpannedValue::PlainSymbol(ref x) => {
+            crate::SpannedValue::PlainSymbol(x) => {
                 Variable::from_symbol(x).map(PatternValuePlace::Variable)
             }
-            crate::SpannedValue::Keyword(ref x) if x.is_namespaced() => Some(x.clone().into()),
+            crate::SpannedValue::Keyword(x) if x.is_namespaced() => Some(x.clone().into()),
             crate::SpannedValue::Boolean(x) => {
-                Some(PatternValuePlace::Constant(NonIntegerConstant::Boolean(x)))
+                Some(PatternValuePlace::Constant(NonIntegerConstant::Boolean(*x)))
             }
             crate::SpannedValue::Float(x) => {
-                Some(PatternValuePlace::Constant(NonIntegerConstant::Float(x)))
+                Some(PatternValuePlace::Constant(NonIntegerConstant::Float(*x)))
             }
-            crate::SpannedValue::BigInteger(ref x) => Some(PatternValuePlace::Constant(
+            crate::SpannedValue::BigInteger(x) => Some(PatternValuePlace::Constant(
                 NonIntegerConstant::BigInteger(x.clone()),
             )),
             crate::SpannedValue::Instant(x) => {
-                Some(PatternValuePlace::Constant(NonIntegerConstant::Instant(x)))
+                Some(PatternValuePlace::Constant(NonIntegerConstant::Instant(*x)))
             }
-            crate::SpannedValue::Text(ref x) =>
+            crate::SpannedValue::Text(x) =>
             // TODO: intern strings. #398.
             {
                 Some(PatternValuePlace::Constant(x.clone().into()))
             }
-            crate::SpannedValue::Uuid(ref u) => {
+            crate::SpannedValue::Uuid(u) => {
                 Some(PatternValuePlace::Constant(NonIntegerConstant::Uuid(*u)))
             }
 
@@ -435,19 +433,17 @@ impl PatternValuePlace {
     }
 
     fn to_pattern_non_value_place(&self) -> Option<PatternNonValuePlace> {
-        match *self {
+        match self {
             PatternValuePlace::Placeholder => Some(PatternNonValuePlace::Placeholder),
-            PatternValuePlace::Variable(ref x) => Some(PatternNonValuePlace::Variable(x.clone())),
+            PatternValuePlace::Variable(x) => Some(PatternNonValuePlace::Variable(x.clone())),
             PatternValuePlace::EntidOrInteger(x) => {
-                if x >= 0 {
-                    Some(PatternNonValuePlace::Entid(x))
+                if *x >= 0 {
+                    Some(PatternNonValuePlace::Entid(*x))
                 } else {
                     None
                 }
             }
-            PatternValuePlace::IdentOrKeyword(ref x) => {
-                Some(PatternNonValuePlace::Ident(x.clone()))
-            }
+            PatternValuePlace::IdentOrKeyword(x) => Some(PatternNonValuePlace::Ident(x.clone())),
             PatternValuePlace::Constant(_) => None,
         }
     }
@@ -493,7 +489,7 @@ pub enum PullAttributeSpec {
 impl std::fmt::Display for PullConcreteAttribute {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            PullConcreteAttribute::Ident(ref k) => write!(f, "{}", k),
+            PullConcreteAttribute::Ident(k) => write!(f, "{}", k),
             PullConcreteAttribute::Entid(i) => write!(f, "{}", i),
         }
     }
@@ -501,7 +497,7 @@ impl std::fmt::Display for PullConcreteAttribute {
 
 impl std::fmt::Display for NamedPullAttribute {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        if let Some(ref alias) = self.alias {
+        if let Some(alias) = &self.alias {
             write!(f, "{} :as {}", self.attribute, alias)
         } else {
             write!(f, "{}", self.attribute)
@@ -513,7 +509,7 @@ impl std::fmt::Display for PullAttributeSpec {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
             PullAttributeSpec::Wildcard => write!(f, "*"),
-            PullAttributeSpec::Attribute(ref attr) => write!(f, "{}", attr),
+            PullAttributeSpec::Attribute(attr) => write!(f, "{}", attr),
         }
     }
 }
@@ -565,23 +561,20 @@ impl From<Variable> for Element {
 impl std::fmt::Display for Element {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            Element::Variable(ref var) => write!(f, "{}", var),
-            Element::Pull(Pull {
-                ref var,
-                ref patterns,
-            }) => {
+            Element::Variable(var) => write!(f, "{}", var),
+            Element::Pull(Pull { var, patterns }) => {
                 write!(f, "(pull {} [ ", var)?;
                 for p in patterns.iter() {
                     write!(f, "{} ", p)?;
                 }
                 write!(f, "])")
             }
-            Element::Aggregate(ref agg) => match agg.args.len() {
+            Element::Aggregate(agg) => match agg.args.len() {
                 0 => write!(f, "({})", agg.func),
                 1 => write!(f, "({} {})", agg.func, agg.args[0]),
                 _ => write!(f, "({} {:?})", agg.func, agg.args),
             },
-            Element::Corresponding(ref var) => write!(f, "(the {})", var),
+            Element::Corresponding(var) => write!(f, "(the {})", var),
         }
     }
 }
@@ -651,7 +644,7 @@ impl FindSpec {
         match self {
             FindScalar(..) => 1,
             FindColl(..) => 1,
-            FindTuple(ref elems) | &FindRel(ref elems) => elems.len(),
+            FindTuple(elems) | FindRel(elems) => elems.len(),
         }
     }
 
@@ -677,13 +670,13 @@ impl FindSpec {
         !self.is_unit_limited()
     }
 
-    pub fn columns<'s>(&'s self) -> Box<dyn Iterator<Item = &Element> + 's> {
+    pub fn columns<'s>(&'s self) -> Box<dyn Iterator<Item = &'s Element> + 's> {
         use self::FindSpec::*;
         match self {
-            FindScalar(ref e) => Box::new(std::iter::once(e)),
-            FindColl(ref e) => Box::new(std::iter::once(e)),
-            FindTuple(ref v) => Box::new(v.iter()),
-            FindRel(ref v) => Box::new(v.iter()),
+            FindScalar(e) => Box::new(std::iter::once(e)),
+            FindColl(e) => Box::new(std::iter::once(e)),
+            FindTuple(v) => Box::new(v.iter()),
+            FindRel(v) => Box::new(v.iter()),
         }
     }
 }
@@ -707,7 +700,7 @@ impl VariableOrPlaceholder {
     pub fn var(&self) -> Option<&Variable> {
         match self {
             VariableOrPlaceholder::Placeholder => None,
-            VariableOrPlaceholder::Variable(ref var) => Some(var),
+            VariableOrPlaceholder::Variable(var) => Some(var),
         }
     }
 }
@@ -724,8 +717,8 @@ impl Binding {
     /// Return each variable or `None`, in order.
     pub fn variables(&self) -> Vec<Option<Variable>> {
         match self {
-            &Binding::BindScalar(ref var) | &Binding::BindColl(ref var) => vec![Some(var.clone())],
-            &Binding::BindRel(ref vars) | &Binding::BindTuple(ref vars) => {
+            Binding::BindScalar(var) | Binding::BindColl(var) => vec![Some(var.clone())],
+            Binding::BindRel(vars) | Binding::BindTuple(vars) => {
                 vars.iter().map(|x| x.var().cloned()).collect()
             }
         }
@@ -735,7 +728,7 @@ impl Binding {
     pub fn is_empty(&self) -> bool {
         match self {
             &Binding::BindScalar(_) | &Binding::BindColl(_) => false,
-            &Binding::BindRel(ref vars) | &Binding::BindTuple(ref vars) => {
+            Binding::BindRel(vars) | Binding::BindTuple(vars) => {
                 vars.iter().all(|x| x.var().is_none())
             }
         }
@@ -761,11 +754,11 @@ impl Binding {
     /// ```
     pub fn is_valid(&self) -> bool {
         match self {
-            Binding::BindScalar(_) | &Binding::BindColl(_) => true,
-            Binding::BindRel(ref vars) | &Binding::BindTuple(ref vars) => {
+            Binding::BindScalar(_) | Binding::BindColl(_) => true,
+            Binding::BindRel(vars) | Binding::BindTuple(vars) => {
                 let mut acc = HashSet::<Variable>::new();
                 for var in vars {
-                    if let VariableOrPlaceholder::Variable(ref var) = *var {
+                    if let VariableOrPlaceholder::Variable(var) = var {
                         if !acc.insert(var.clone()) {
                             // It's invalid if there was an equal var already present in the set --
                             // i.e., we have a duplicate var.
@@ -810,7 +803,7 @@ impl Pattern {
         tx: PatternNonValuePlace,
     ) -> Option<Pattern> {
         let aa = a.clone(); // Too tired of fighting borrow scope for now.
-        if let PatternNonValuePlace::Ident(ref k) = aa {
+        if let PatternNonValuePlace::Ident(k) = aa {
             if k.is_backward() {
                 // e and v have different types; we must convert them.
                 // Not every parseable value is suitable for the entity field!
@@ -897,7 +890,7 @@ impl OrWhereClause {
     pub fn is_pattern_or_patterns(&self) -> bool {
         match self {
             OrWhereClause::Clause(WhereClause::Pattern(_)) => true,
-            OrWhereClause::And(ref clauses) => clauses.iter().all(|clause| clause.is_pattern()),
+            OrWhereClause::And(clauses) => clauses.iter().all(|clause| clause.is_pattern()),
             _ => false,
         }
     }
@@ -1052,13 +1045,13 @@ impl OrJoin {
     pub fn is_fully_unified(&self) -> bool {
         match &self.unify_vars {
             UnifyVars::Implicit => true,
-            UnifyVars::Explicit(ref vars) => {
+            UnifyVars::Explicit(vars) => {
                 // We know that the join list must be a subset of the vars in the pattern, or
                 // it would have failed validation. That allows us to simply compare counts here.
                 // TODO: in debug mode, do a full intersection, and verify that our count check
                 // returns the same results.
                 // Use the cached list if we have one.
-                if let Some(ref mentioned) = self.mentioned_vars {
+                if let Some(mentioned) = &self.mentioned_vars {
                     vars.len() == mentioned.len()
                 } else {
                     vars.len() == self.collect_mentioned_variables().len()
@@ -1081,12 +1074,12 @@ impl ContainsVariables for WhereClause {
     fn accumulate_mentioned_variables(&self, acc: &mut BTreeSet<Variable>) {
         use self::WhereClause::*;
         match self {
-            OrJoin(ref o) => o.accumulate_mentioned_variables(acc),
-            Pred(ref p) => p.accumulate_mentioned_variables(acc),
-            Pattern(ref p) => p.accumulate_mentioned_variables(acc),
-            NotJoin(ref n) => n.accumulate_mentioned_variables(acc),
-            WhereFn(ref f) => f.accumulate_mentioned_variables(acc),
-            TypeAnnotation(ref a) => a.accumulate_mentioned_variables(acc),
+            OrJoin(o) => o.accumulate_mentioned_variables(acc),
+            Pred(p) => p.accumulate_mentioned_variables(acc),
+            Pattern(p) => p.accumulate_mentioned_variables(acc),
+            NotJoin(n) => n.accumulate_mentioned_variables(acc),
+            WhereFn(f) => f.accumulate_mentioned_variables(acc),
+            TypeAnnotation(a) => a.accumulate_mentioned_variables(acc),
             RuleExpr => (),
         }
     }
@@ -1096,12 +1089,12 @@ impl ContainsVariables for OrWhereClause {
     fn accumulate_mentioned_variables(&self, acc: &mut BTreeSet<Variable>) {
         use self::OrWhereClause::*;
         match self {
-            And(ref clauses) => {
+            And(clauses) => {
                 for clause in clauses {
                     clause.accumulate_mentioned_variables(acc)
                 }
             }
-            Clause(ref clause) => clause.accumulate_mentioned_variables(acc),
+            Clause(clause) => clause.accumulate_mentioned_variables(acc),
         }
     }
 }
@@ -1129,7 +1122,7 @@ impl OrJoin {
             self.mentioned_vars = Some(m);
         }
 
-        if let Some(ref mentioned) = self.mentioned_vars {
+        if let Some(mentioned) = &self.mentioned_vars {
             mentioned
         } else {
             unreachable!()
@@ -1148,7 +1141,7 @@ impl ContainsVariables for NotJoin {
 impl ContainsVariables for Predicate {
     fn accumulate_mentioned_variables(&self, acc: &mut BTreeSet<Variable>) {
         for arg in &self.args {
-            if let FnArg::Variable(ref v) = *arg {
+            if let FnArg::Variable(v) = arg {
                 acc_ref(acc, v)
             }
         }
@@ -1164,10 +1157,10 @@ impl ContainsVariables for TypeAnnotation {
 impl ContainsVariables for Binding {
     fn accumulate_mentioned_variables(&self, acc: &mut BTreeSet<Variable>) {
         match self {
-            Binding::BindScalar(ref v) | &Binding::BindColl(ref v) => acc_ref(acc, v),
-            Binding::BindRel(ref vs) | &Binding::BindTuple(ref vs) => {
+            Binding::BindScalar(v) | Binding::BindColl(v) => acc_ref(acc, v),
+            Binding::BindRel(vs) | Binding::BindTuple(vs) => {
                 for v in vs {
-                    if let VariableOrPlaceholder::Variable(ref v) = *v {
+                    if let VariableOrPlaceholder::Variable(v) = v {
                         acc_ref(acc, v);
                     }
                 }
@@ -1179,7 +1172,7 @@ impl ContainsVariables for Binding {
 impl ContainsVariables for WhereFn {
     fn accumulate_mentioned_variables(&self, acc: &mut BTreeSet<Variable>) {
         for arg in &self.args {
-            if let FnArg::Variable(ref v) = *arg {
+            if let FnArg::Variable(v) = arg {
                 acc_ref(acc, v)
             }
         }
@@ -1196,16 +1189,16 @@ fn acc_ref<T: Clone + Ord>(acc: &mut BTreeSet<T>, v: &T) {
 
 impl ContainsVariables for Pattern {
     fn accumulate_mentioned_variables(&self, acc: &mut BTreeSet<Variable>) {
-        if let PatternNonValuePlace::Variable(ref v) = self.entity {
+        if let PatternNonValuePlace::Variable(v) = &self.entity {
             acc_ref(acc, v)
         }
-        if let PatternNonValuePlace::Variable(ref v) = self.attribute {
+        if let PatternNonValuePlace::Variable(v) = &self.attribute {
             acc_ref(acc, v)
         }
-        if let PatternValuePlace::Variable(ref v) = self.value {
+        if let PatternValuePlace::Variable(v) = &self.value {
             acc_ref(acc, v)
         }
-        if let PatternNonValuePlace::Variable(ref v) = self.tx {
+        if let PatternNonValuePlace::Variable(v) = &self.tx {
             acc_ref(acc, v)
         }
     }

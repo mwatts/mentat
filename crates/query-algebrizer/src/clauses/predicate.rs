@@ -44,7 +44,7 @@ impl ConjoiningClauses {
 
     fn potential_types(&self, schema: &Schema, fn_arg: &FnArg) -> Result<ValueTypeSet> {
         match fn_arg {
-            FnArg::Variable(ref v) => Ok(self.known_type_set(v)),
+            FnArg::Variable(v) => Ok(self.known_type_set(v)),
             _ => fn_arg.potential_types(schema),
         }
     }
@@ -245,8 +245,8 @@ mod testing {
 
         let op = PlainSymbol::plain("<");
         let comp = Inequality::from_datalog_operator(op.name()).unwrap();
-        assert!(cc
-            .apply_inequality(
+        assert!(
+            cc.apply_inequality(
                 known,
                 comp,
                 Predicate {
@@ -257,7 +257,8 @@ mod testing {
                     ]
                 }
             )
-            .is_ok());
+            .is_ok()
+        );
 
         assert!(!cc.is_known_empty());
 
@@ -329,8 +330,8 @@ mod testing {
 
         let op = PlainSymbol::plain(">=");
         let comp = Inequality::from_datalog_operator(op.name()).unwrap();
-        assert!(cc
-            .apply_inequality(
+        assert!(
+            cc.apply_inequality(
                 known,
                 comp,
                 Predicate {
@@ -341,7 +342,8 @@ mod testing {
                     ]
                 }
             )
-            .is_ok());
+            .is_ok()
+        );
 
         assert!(!cc.is_known_empty());
         cc.apply_parsed_pattern(

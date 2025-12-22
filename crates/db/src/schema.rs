@@ -15,7 +15,7 @@ use db_traits::errors::{DbErrorKind, Result};
 use edn;
 use edn::symbols;
 
-use core_traits::{attribute, Attribute, Entid, KnownEntid, TypedValue, ValueType};
+use core_traits::{Attribute, Entid, KnownEntid, TypedValue, ValueType, attribute};
 
 use crate::metadata;
 use crate::metadata::AttributeAlteration;
@@ -196,8 +196,8 @@ impl AttributeBuilder {
         if let Some(multival) = self.multival {
             attribute.multival = multival;
         }
-        if let Some(ref unique) = self.unique {
-            attribute.unique = *unique;
+        if let Some(unique) = &self.unique {
+            attribute.unique = unique.clone();
         }
         if let Some(index) = self.index {
             attribute.index = index;
@@ -221,9 +221,9 @@ impl AttributeBuilder {
             }
         }
 
-        if let Some(ref unique) = self.unique {
+        if let Some(unique) = &self.unique {
             if *unique != attribute.unique {
-                attribute.unique = *unique;
+                attribute.unique = unique.clone();
                 mutations.push(AttributeAlteration::Unique);
             }
         } else if attribute.unique != None {
@@ -365,7 +365,7 @@ impl SchemaTypeChecking for Schema {
                 (ValueType::Bytes, tv @ TypedValue::Bytes(_)) => Ok(tv),
                 // Ref coerces a little: we interpret some things depending on the schema as a Ref.
                 (ValueType::Ref, TypedValue::Long(x)) => Ok(TypedValue::Ref(x)),
-                (ValueType::Ref, TypedValue::Keyword(ref x)) => {
+                (ValueType::Ref, TypedValue::Keyword(x)) => {
                     self.require_entid(&x).map(|entid| entid.into())
                 }
 

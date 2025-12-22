@@ -153,8 +153,8 @@ impl ColumnName for DatomsColumn {
 impl ColumnName for VariableColumn {
     fn column_name(&self) -> String {
         match self {
-            VariableColumn::Variable(ref v) => v.to_string(),
-            VariableColumn::VariableTypeTag(ref v) => format!("{}_value_type_tag", v.as_str()),
+            VariableColumn::Variable(v) => v.to_string(),
+            VariableColumn::VariableTypeTag(v) => format!("{}_value_type_tag", v.as_str()),
         }
     }
 }
@@ -163,8 +163,8 @@ impl Debug for VariableColumn {
     fn fmt(&self, f: &mut Formatter) -> ::std::fmt::Result {
         match self {
             // These should agree with VariableColumn::column_name.
-            VariableColumn::Variable(ref v) => write!(f, "{}", v.as_str()),
-            VariableColumn::VariableTypeTag(ref v) => write!(f, "{}_value_type_tag", v.as_str()),
+            VariableColumn::Variable(v) => write!(f, "{}", v.as_str()),
+            VariableColumn::VariableTypeTag(v) => write!(f, "{}_value_type_tag", v.as_str()),
         }
     }
 }
@@ -178,10 +178,10 @@ impl Debug for DatomsColumn {
 impl Debug for Column {
     fn fmt(&self, f: &mut Formatter) -> ::std::fmt::Result {
         match self {
-            Column::Fixed(ref c) => c.fmt(f),
-            Column::Fulltext(ref c) => c.fmt(f),
-            Column::Variable(ref v) => v.fmt(f),
-            Column::Transactions(ref t) => t.fmt(f),
+            Column::Fixed(c) => c.fmt(f),
+            Column::Fulltext(c) => c.fmt(f),
+            Column::Variable(v) => v.fmt(f),
+            Column::Transactions(t) => t.fmt(f),
         }
     }
 }
@@ -271,11 +271,11 @@ impl QualifiedAlias {
     }
 
     pub fn for_associated_type_tag(&self) -> Option<QualifiedAlias> {
-        match self.1 {
-            Column::Fixed(ref c) => c.associated_type_tag_column().map(Column::Fixed),
+        match &self.1 {
+            Column::Fixed(c) => c.associated_type_tag_column().map(Column::Fixed),
             Column::Fulltext(_) => None,
             Column::Variable(_) => None,
-            Column::Transactions(ref c) => c.associated_type_tag_column().map(Column::Transactions),
+            Column::Transactions(c) => c.associated_type_tag_column().map(Column::Transactions),
         }
         .map(|d| QualifiedAlias(self.0.clone(), d))
     }
@@ -298,9 +298,9 @@ impl Debug for QueryValue {
     fn fmt(&self, f: &mut Formatter) -> ::std::fmt::Result {
         use self::QueryValue::*;
         match self {
-            Column(ref qa) => write!(f, "{:?}", qa),
-            Entid(ref entid) => write!(f, "entity({:?})", entid),
-            TypedValue(ref typed_value) => write!(f, "value({:?})", typed_value),
+            Column(qa) => write!(f, "{:?}", qa),
+            Entid(entid) => write!(f, "entity({:?})", entid),
+            TypedValue(typed_value) => write!(f, "value({:?})", typed_value),
             PrimitiveLong(value) => write!(f, "primitive({:?})", value),
         }
     }
@@ -534,19 +534,19 @@ impl Debug for ColumnConstraint {
     fn fmt(&self, f: &mut Formatter) -> ::std::fmt::Result {
         use self::ColumnConstraint::*;
         match self {
-            Equals(ref qa1, ref thing) => write!(f, "{:?} = {:?}", qa1, thing),
+            Equals(qa1, thing) => write!(f, "{:?} = {:?}", qa1, thing),
 
             Inequality {
                 operator,
-                ref left,
-                ref right,
+                left,
+                right,
             } => write!(f, "{:?} {:?} {:?}", left, operator, right),
 
-            Matches(ref qa, ref thing) => write!(f, "{:?} MATCHES {:?}", qa, thing),
+            Matches(qa, thing) => write!(f, "{:?} MATCHES {:?}", qa, thing),
 
             HasTypes {
-                ref value,
-                ref value_types,
+                value,
+                value_types,
                 check_value,
             } => {
                 // This is cludgey, but it's debug code.
@@ -573,7 +573,7 @@ impl Debug for ColumnConstraint {
                 }
                 write!(f, "1)")
             }
-            NotExists(ref ct) => write!(f, "NOT EXISTS {:?}", ct),
+            NotExists(ct) => write!(f, "NOT EXISTS {:?}", ct),
         }
     }
 }
@@ -625,54 +625,49 @@ impl Debug for EmptyBecause {
     fn fmt(&self, f: &mut Formatter) -> ::std::fmt::Result {
         use self::EmptyBecause::*;
         match self {
-            CachedAttributeHasNoEntity {
-                ref value,
-                ref attr,
-            } => write!(f, "(?e, {}, {:?}, _) not present in store", attr, value),
-            CachedAttributeHasNoValues {
-                ref entity,
-                ref attr,
-            } => write!(f, "({}, {}, ?v, _) not present in store", entity, attr),
+            CachedAttributeHasNoEntity { value, attr } => {
+                write!(f, "(?e, {}, {:?}, _) not present in store", attr, value)
+            }
+            CachedAttributeHasNoValues { entity, attr } => {
+                write!(f, "({}, {}, ?v, _) not present in store", entity, attr)
+            }
             ConflictingBindings {
-                ref var,
-                ref existing,
-                ref desired,
+                var,
+                existing,
+                desired,
             } => write!(
                 f,
                 "Var {:?} can't be {:?} because it's already bound to {:?}",
                 var, desired, existing
             ),
             TypeMismatch {
-                ref var,
-                ref existing,
-                ref desired,
+                var,
+                existing,
+                desired,
             } => write!(
                 f,
                 "Type mismatch: {:?} can't be {:?}, because it's already {:?}",
                 var, desired, existing
             ),
-            KnownTypeMismatch {
-                ref left,
-                ref right,
-            } => write!(
+            KnownTypeMismatch { left, right } => write!(
                 f,
                 "Type mismatch: {:?} can't be compared to {:?}",
                 left, right
             ),
-            NoValidTypes(ref var) => write!(f, "Type mismatch: {:?} has no valid types", var),
+            NoValidTypes(var) => write!(f, "Type mismatch: {:?} has no valid types", var),
             NonAttributeArgument => write!(f, "Non-attribute argument in attribute place"),
             NonInstantArgument => write!(f, "Non-instant argument in instant place"),
             NonEntityArgument => write!(f, "Non-entity argument in entity place"),
             NonNumericArgument => write!(f, "Non-numeric argument in numeric place"),
             NonStringFulltextValue => write!(f, "Non-string argument for fulltext attribute"),
-            UnresolvedIdent(ref kw) => write!(f, "Couldn't resolve keyword {}", kw),
-            InvalidAttributeIdent(ref kw) => write!(f, "{} does not name an attribute", kw),
+            UnresolvedIdent(kw) => write!(f, "Couldn't resolve keyword {}", kw),
+            InvalidAttributeIdent(kw) => write!(f, "{} does not name an attribute", kw),
             InvalidAttributeEntid(entid) => write!(f, "{} is not an attribute", entid),
             NonFulltextAttribute(entid) => write!(f, "{} is not a fulltext attribute", entid),
-            InvalidBinding(ref column, ref tv) => {
+            InvalidBinding(column, tv) => {
                 write!(f, "{:?} cannot name column {:?}", tv, column)
             }
-            ValueTypeMismatch(value_type, ref typed_value) => write!(
+            ValueTypeMismatch(value_type, typed_value) => write!(
                 f,
                 "Type mismatch: {:?} doesn't match attribute type {:?}",
                 typed_value, value_type

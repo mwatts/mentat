@@ -26,7 +26,7 @@ use db_traits::errors::{DbErrorKind, Result};
 
 use mentat_core::util::Either::*;
 
-use core_traits::{attribute, Attribute, Entid, TypedValue};
+use core_traits::{Attribute, Entid, TypedValue, attribute};
 
 use crate::schema::SchemaBuilding;
 use edn::entities::OpType;
@@ -230,10 +230,10 @@ impl Generation {
     pub(crate) fn temp_id_avs(&self) -> Vec<(TempIdHandle, AVPair)> {
         let mut temp_id_avs: Vec<(TempIdHandle, AVPair)> = vec![];
         // TODO: map/collect.
-        for &UpsertE(ref t, ref a, ref v) in &self.upserts_e {
+        for &UpsertE(ref t, a, ref v) in &self.upserts_e {
             // TODO: figure out how to make this less expensive, i.e., don't require
             // clone() of an arbitrary value.
-            temp_id_avs.push((t.clone(), (*a, v.clone())));
+            temp_id_avs.push((t.clone(), (a, v.clone())));
         }
         temp_id_avs
     }
@@ -260,8 +260,14 @@ impl Generation {
         &self,
         schema: &Schema,
     ) -> Result<BTreeMap<TempIdHandle, usize>> {
-        assert!(self.upserts_e.is_empty(), "All upserts should have been upserted, resolved, or moved to the allocated population!");
-        assert!(self.upserts_ev.is_empty(), "All upserts should have been upserted, resolved, or moved to the allocated population!");
+        assert!(
+            self.upserts_e.is_empty(),
+            "All upserts should have been upserted, resolved, or moved to the allocated population!"
+        );
+        assert!(
+            self.upserts_ev.is_empty(),
+            "All upserts should have been upserted, resolved, or moved to the allocated population!"
+        );
 
         let mut temp_ids: BTreeSet<TempIdHandle> = BTreeSet::default();
         let mut tempid_avs: BTreeMap<(Entid, TypedValueOr<TempIdHandle>), Vec<TempIdHandle>> =
@@ -269,7 +275,7 @@ impl Generation {
 
         for term in self.allocations.iter() {
             match term {
-                Term::AddOrRetract(OpType::Add, Right(ref t1), a, Right(ref t2)) => {
+                Term::AddOrRetract(OpType::Add, Right(t1), a, Right(t2)) => {
                     temp_ids.insert(t1.clone());
                     temp_ids.insert(t2.clone());
                     let attribute: &Attribute = schema.require_attribute_for_entid(*a)?;
@@ -280,7 +286,7 @@ impl Generation {
                             .push(t1.clone());
                     }
                 }
-                Term::AddOrRetract(OpType::Add, Right(ref t), a, ref x @ Left(_)) => {
+                Term::AddOrRetract(OpType::Add, Right(t), a, x @ Left(_)) => {
                     temp_ids.insert(t.clone());
                     let attribute: &Attribute = schema.require_attribute_for_entid(*a)?;
                     if attribute.unique == Some(attribute::Unique::Identity) {
@@ -290,7 +296,7 @@ impl Generation {
                             .push(t.clone());
                     }
                 }
-                Term::AddOrRetract(OpType::Add, Left(_), _, Right(ref t)) => {
+                Term::AddOrRetract(OpType::Add, Left(_), _, Right(t)) => {
                     temp_ids.insert(t.clone());
                 }
                 Term::AddOrRetract(OpType::Add, Left(_), _, Left(_)) => unreachable!(),
@@ -373,9 +379,14 @@ impl Generation {
                 // TODO: consider require implementing require on temp_id_map.
                 Term::AddOrRetract(op, Right(t1), a, Right(t2)) => {
                     match (op, temp_id_map.get(&*t1), temp_id_map.get(&*t2)) {
-                        (op, Some(&n1), Some(&n2)) => Term::AddOrRetract(op, n1, a, TypedValue::Ref(n2.0)),
+                        (op, Some(&n1), Some(&n2)) => {
+                            Term::AddOrRetract(op, n1, a, TypedValue::Ref(n2.0))
+                        }
                         (OpType::Add, _, _) => unreachable!(), // This is a coding error -- every tempid in a :db/add entity should resolve or be allocated.
-                        (OpType::Retract, _, _) => bail!(DbErrorKind::NotYetImplemented(format!("[:db/retract ...] entity referenced tempid that did not upsert: one of {}, {}", t1, t2))),
+                        (OpType::Retract, _, _) => bail!(DbErrorKind::NotYetImplemented(format!(
+                            "[:db/retract ...] entity referenced tempid that did not upsert: one of {}, {}",
+                            t1, t2
+                        ))),
                     }
                 }
                 Term::AddOrRetract(op, Right(t), a, Left(v)) => {

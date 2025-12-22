@@ -15,9 +15,6 @@ use crate::ValueType;
 trait EnumSetExtensions<T: ::enum_set::CLike + Clone> {
     /// Return a set containing both `x` and `y`.
     fn of_both(x: T, y: T) -> EnumSet<T>;
-
-    /// Return a clone of `self` with `y` added.
-    fn with(&self, y: T) -> EnumSet<T>;
 }
 
 impl<T: ::enum_set::CLike + Clone> EnumSetExtensions<T> for EnumSet<T> {
@@ -25,13 +22,6 @@ impl<T: ::enum_set::CLike + Clone> EnumSetExtensions<T> for EnumSet<T> {
     fn of_both(x: T, y: T) -> Self {
         let mut o = EnumSet::new();
         o.insert(x);
-        o.insert(y);
-        o
-    }
-
-    /// Return a clone of `self` with `y` added.
-    fn with(&self, y: T) -> EnumSet<T> {
-        let mut o = self.clone();
         o.insert(y);
         o
     }

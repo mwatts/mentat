@@ -62,8 +62,8 @@ use std::io::Write;
 
 use itertools::Itertools;
 use rusqlite;
-use rusqlite::types::ToSql;
 use rusqlite::TransactionBehavior;
+use rusqlite::types::ToSql;
 use tabwriter::TabWriter;
 
 use crate::bootstrap;
@@ -80,8 +80,8 @@ use crate::schema::SchemaBuilding;
 use crate::tx::{transact, transact_terms};
 use crate::types::*;
 use crate::watcher::NullWatcher;
-use edn::entities::{EntidOrIdent, TempId};
 use edn::InternSet;
+use edn::entities::{EntidOrIdent, TempId};
 use mentat_core::{HasSchema, SQLValueType, TxReport};
 
 /// Represents a *datom* (assertion) in the store.
@@ -116,9 +116,9 @@ pub struct FulltextValues(pub Vec<(i64, String)>);
 impl Datom {
     pub fn to_edn(&self) -> edn::Value {
         let f = |entid: &EntidOrIdent| -> edn::Value {
-            match *entid {
-                EntidOrIdent::Entid(ref y) => edn::Value::Integer(*y),
-                EntidOrIdent::Ident(ref y) => edn::Value::Keyword(y.clone()),
+            match entid {
+                EntidOrIdent::Entid(y) => edn::Value::Integer(*y),
+                EntidOrIdent::Ident(y) => edn::Value::Keyword(y.clone()),
             }
         };
 
@@ -149,8 +149,8 @@ impl FulltextValues {
         edn::Value::Vector(
             (&self.0)
                 .iter()
-                .map(|&(x, ref y)| {
-                    edn::Value::Vector(vec![edn::Value::Integer(x), edn::Value::Text(y.clone())])
+                .map(|(x, y)| {
+                    edn::Value::Vector(vec![edn::Value::Integer(*x), edn::Value::Text(y.clone())])
                 })
                 .collect(),
         )
@@ -295,7 +295,7 @@ pub fn transactions_after<S: Borrow<Schema>>(
     // Group by tx.
     let r: Vec<Datoms> = r?
         .into_iter()
-        .group_by(|x| x.tx)
+        .chunk_by(|x| x.tx)
         .into_iter()
         .map(|(_key, group)| Datoms(group.collect()))
         .collect();

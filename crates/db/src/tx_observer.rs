@@ -10,7 +10,7 @@
 
 use std::sync::{Arc, Weak};
 
-use std::sync::mpsc::{channel, Receiver, RecvError, Sender};
+use std::sync::mpsc::{Receiver, RecvError, Sender, channel};
 
 use std::thread;
 
@@ -118,7 +118,7 @@ impl TxObservationService {
     }
 
     pub fn deregister(&mut self, key: &str) {
-        Arc::make_mut(&mut self.observers).remove(key);
+        Arc::make_mut(&mut self.observers).shift_remove(key);
     }
 
     pub fn has_observers(&self) -> bool {
