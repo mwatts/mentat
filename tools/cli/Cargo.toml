@@ -20,23 +20,23 @@ test = false
 
 [dependencies]
 combine = "~4.6"
-dirs = "~4.0"
-env_logger = "~0.9"
+dirs = "~6.0"
+env_logger = "~0.11"
 failure = "~0.1"
 failure_derive = "~0.1"
 getopts = "~0.2"
-lazy_static = "~1.4"
+lazy_static = "~1.5"
 linefeed = "~0.6"
 log = "~0.4"
-tabwriter = "~1.2"
-tempfile = "~3.2"
-termion = "~1.5"
+tabwriter = "~1.4"
+tempfile = "~3.23"
+termion = "~4.0"
 time = "~0.3"
-bytes = { version = "1.0.1", features = ["serde"] }
+bytes = { version = "1.11.0", features = ["serde"] }
 hex = "0.4.3"
 
 [dependencies.rusqlite]
-version = "~0.26"
+version = "~0.38"
 features = ["limits", "bundled"]
 
 [dependencies.mentat]

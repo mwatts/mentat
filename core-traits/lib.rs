@@ -582,7 +582,7 @@ impl TypedValue {
         match self {
             TypedValue::Uuid(v) => {
                 // Get an independent copy of the string.
-                let s: String = v.to_hyphenated().to_string();
+                let s: String = v.hyphenated().to_string();
 
                 // Make a CString out of the new bytes.
                 let c: CString = CString::new(s).expect("String conversion failed!");
@@ -603,7 +603,7 @@ impl TypedValue {
 
     pub fn into_uuid_string(self) -> Option<String> {
         match self {
-            TypedValue::Uuid(v) => Some(v.to_hyphenated().to_string()),
+            TypedValue::Uuid(v) => Some(v.hyphenated().to_string()),
             _ => None,
         }
     }
@@ -963,7 +963,7 @@ impl Binding {
 
     pub fn into_uuid_string(self) -> Option<String> {
         match self {
-            Binding::Scalar(TypedValue::Uuid(v)) => Some(v.to_hyphenated().to_string()),
+            Binding::Scalar(TypedValue::Uuid(v)) => Some(v.hyphenated().to_string()),
             _ => None,
         }
     }

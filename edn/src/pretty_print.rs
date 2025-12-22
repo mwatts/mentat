@@ -101,7 +101,7 @@ impl Value {
             Value::Text(ref v) => pp.text("\"").append(v.as_str()).append("\""),
             Value::Uuid(ref u) => pp
                 .text("#uuid \"")
-                .append(u.to_hyphenated().to_string())
+                .append(u.hyphenated().to_string())
                 .append("\""),
             Value::Instant(ref v) => pp
                 .text("#inst \"")

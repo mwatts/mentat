@@ -21,5 +21,5 @@ path = "../edn"
 path = "../core-traits"
 
 [dependencies.rusqlite]
-version = "~0.26"
+version = "~0.38"
 features = ["limits", "bundled"]

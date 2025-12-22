@@ -293,7 +293,7 @@ fn run_statement<'sqlite, 'stmt, 'bound>(
             .iter()
             .map(|&(ref k, ref v)| (k.as_str(), v.as_ref() as &dyn ToSql))
             .collect();
-        statement.query_named(&refs)?
+        statement.query(refs.as_slice())?
     };
     Ok(rows)
 }

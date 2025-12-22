@@ -13,13 +13,13 @@ sqlcipher = ["rusqlite/sqlcipher"]
 [dependencies]
 failure = "~0.1"
 failure_derive = "~0.1"
-http = "~0.2"
-hyper = "~0.14"
+http = "~1.4"
+hyper = "~1.8"
 serde_json = "~1.0"
-uuid = { version = "~0.8" }
+uuid = { version = "~1.19" }
 
 [dependencies.rusqlite]
-version = "~0.26"
+version = "~0.38"
 features = ["limits", "bundled"]
 
 [dependencies.db_traits]

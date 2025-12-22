@@ -769,7 +769,7 @@ impl MentatStoring for rusqlite::Connection {
         // produce the map [a v] -> e.
         //
         // TODO: `collect` into a HashSet so that any (a, v) is resolved at most once.
-        let max_vars = self.limit(Limit::SQLITE_LIMIT_VARIABLE_NUMBER) as usize;
+        let max_vars = self.limit(Limit::SQLITE_LIMIT_VARIABLE_NUMBER).unwrap() as usize;
         let chunks: itertools::IntoChunks<_> = avs.iter().enumerate().chunks(max_vars / 4);
 
         // We'd like to `flat_map` here, but it's not obvious how to `flat_map` across `Result`.
@@ -902,7 +902,7 @@ impl MentatStoring for rusqlite::Connection {
     ) -> Result<()> {
         let bindings_per_statement = 6;
 
-        let max_vars = self.limit(Limit::SQLITE_LIMIT_VARIABLE_NUMBER) as usize;
+        let max_vars = self.limit(Limit::SQLITE_LIMIT_VARIABLE_NUMBER).unwrap() as usize;
         let chunks: itertools::IntoChunks<_> =
             entities.iter().chunks(max_vars / bindings_per_statement);
 
@@ -971,7 +971,7 @@ impl MentatStoring for rusqlite::Connection {
         entities: &'a [ReducedEntity<'a>],
         search_type: SearchType,
     ) -> Result<()> {
-        let max_vars = self.limit(Limit::SQLITE_LIMIT_VARIABLE_NUMBER) as usize;
+        let max_vars = self.limit(Limit::SQLITE_LIMIT_VARIABLE_NUMBER).unwrap() as usize;
         let bindings_per_statement = 6;
 
         let mut outer_searchid = 2000;
@@ -1869,13 +1869,16 @@ mod tests {
     #[test]
     fn test_sqlite_limit() {
         let conn = new_connection("").expect("Couldn't open in-memory db");
-        let initial = conn.limit(Limit::SQLITE_LIMIT_VARIABLE_NUMBER);
+        let initial = conn.limit(Limit::SQLITE_LIMIT_VARIABLE_NUMBER).unwrap();
         // Sanity check.
         assert!(initial > 500);
 
         // Make sure setting works.
         conn.set_limit(Limit::SQLITE_LIMIT_VARIABLE_NUMBER, 222);
-        assert_eq!(222, conn.limit(Limit::SQLITE_LIMIT_VARIABLE_NUMBER));
+        assert_eq!(
+            222,
+            conn.limit(Limit::SQLITE_LIMIT_VARIABLE_NUMBER).unwrap()
+        );
     }
 
     #[test]

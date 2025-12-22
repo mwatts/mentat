@@ -10,8 +10,12 @@
 
 #![allow(dead_code)]
 
-use hyper::{body, header, Body, Client, Method, Request, StatusCode};
+use http_body_util::{BodyExt, Full};
+use hyper::body::Bytes;
+use hyper::{header, Method, Request, StatusCode};
 use hyper_tls::HttpsConnector;
+use hyper_util::client::legacy::Client;
+use hyper_util::rt::TokioExecutor;
 // TODO: https://github.com/mozilla/mentat/issues/570
 // use serde_cbor;
 use futures::executor::block_on;
@@ -72,19 +76,24 @@ impl RemoteClient {
     // or somesuch. But for now, we get code duplication.
     fn get_uuid(&self, uri: String) -> Result<Uuid> {
         let https = HttpsConnector::new();
-        let client = Client::builder().build::<_, Body>(https);
+        let client: Client<_, Full<Bytes>> = Client::builder(TokioExecutor::new()).build(https);
 
         d(&"client".to_string());
 
-        let uri = uri.parse()?;
+        let uri: hyper::Uri = uri.parse()?;
 
         d(&format!("GET {:?}", uri));
 
         let work = async {
-            let res = client.get(uri).await.unwrap(); // TODO use '?' fix From hyper::Error to MentatError;
+            let req = Request::builder()
+                .method(Method::GET)
+                .uri(uri)
+                .body(Full::new(Bytes::new()))
+                .unwrap();
+            let res = client.request(req).await.unwrap(); // TODO use '?' fix From hyper::Error to MentatError;
             dbg!("response.status: {}", res.status());
 
-            let body_bytes = body::to_bytes(res.into_body()).await.unwrap(); // TODO use '?' fix From hyper::Error to MentatError;
+            let body_bytes = res.into_body().collect().await.unwrap().to_bytes(); // TODO use '?' fix From hyper::Error to MentatError;
             let body =
                 String::from_utf8(body_bytes.to_vec()).expect("response was not valid utf-8");
             let json: SerializedHead = serde_json::from_str(&body)
@@ -94,12 +103,9 @@ impl RemoteClient {
         block_on(work)
     }
 
-    fn put<T>(&self, uri: String, payload: T, expected: StatusCode) -> Result<()>
-    where
-        hyper::Body: std::convert::From<T>,
-    {
+    fn put(&self, uri: String, payload: String, expected: StatusCode) -> Result<()> {
         let https = HttpsConnector::new();
-        let client = Client::builder().build::<_, Body>(https);
+        let client: Client<_, Full<Bytes>> = Client::builder(TokioExecutor::new()).build(https);
 
         d(&format!("PUT {:?}", uri));
 
@@ -107,7 +113,7 @@ impl RemoteClient {
             .method(Method::PUT)
             .uri(uri)
             .header(header::CONTENT_TYPE, mime::APPLICATION_JSON.to_string())
-            .body(payload.into())
+            .body(Full::new(Bytes::from(payload)))
             .unwrap();
 
         let work = async {
@@ -124,7 +130,7 @@ impl RemoteClient {
 
     fn get_transactions(&self, parent_uuid: &Uuid) -> Result<Vec<Uuid>> {
         let https = HttpsConnector::new();
-        let client = Client::builder().build::<_, Body>(https);
+        let client: Client<_, Full<Bytes>> = Client::builder(TokioExecutor::new()).build(https);
 
         d(&"client".to_string());
 
@@ -133,15 +139,20 @@ impl RemoteClient {
             self.bound_base_uri(),
             parent_uuid
         );
-        let uri = uri.parse()?;
+        let uri: hyper::Uri = uri.parse()?;
 
         d(&format!("GET {:?}", uri));
 
         let work = async {
-            let res = client.get(uri).await.unwrap(); // TODO use '?' fix From hyper::Error to MentatError;
+            let req = Request::builder()
+                .method(Method::GET)
+                .uri(uri)
+                .body(Full::new(Bytes::new()))
+                .unwrap();
+            let res = client.request(req).await.unwrap(); // TODO use '?' fix From hyper::Error to MentatError;
             dbg!("response.status: {}", res.status());
 
-            let body_bytes = body::to_bytes(res.into_body()).await.unwrap(); // TODO use '?' fix From hyper::Error to MentatError;
+            let body_bytes = res.into_body().collect().await.unwrap().to_bytes(); // TODO use '?' fix From hyper::Error to MentatError;
             let body =
                 String::from_utf8(body_bytes.to_vec()).expect("response was not valid utf-8");
             let json: SerializedTransactions = serde_json::from_str(&body)
@@ -154,7 +165,7 @@ impl RemoteClient {
 
     fn get_chunks(&self, transaction_uuid: &Uuid) -> Result<Vec<Uuid>> {
         let https = HttpsConnector::new();
-        let client = Client::builder().build::<_, Body>(https);
+        let client: Client<_, Full<Bytes>> = Client::builder(TokioExecutor::new()).build(https);
 
         d(&"client".to_string());
 
@@ -163,15 +174,20 @@ impl RemoteClient {
             self.bound_base_uri(),
             transaction_uuid
         );
-        let uri = uri.parse()?;
+        let uri: hyper::Uri = uri.parse()?;
 
         d(&format!("GET {:?}", uri));
 
         let work = async {
-            let res = client.get(uri).await.unwrap(); // TODO use '?' fix From hyper::Error to MentatError;
+            let req = Request::builder()
+                .method(Method::GET)
+                .uri(uri)
+                .body(Full::new(Bytes::new()))
+                .unwrap();
+            let res = client.request(req).await.unwrap(); // TODO use '?' fix From hyper::Error to MentatError;
             dbg!("response.status: {}", res.status());
 
-            let body_bytes = body::to_bytes(res.into_body()).await.unwrap(); // TODO use '?' fix From hyper::Error to MentatError;
+            let body_bytes = res.into_body().collect().await.unwrap().to_bytes(); // TODO use '?' fix From hyper::Error to MentatError;
             let body =
                 String::from_utf8(body_bytes.to_vec()).expect("response was not valid utf-8");
             let json: DeserializableTransaction = serde_json::from_str(&body)
@@ -185,20 +201,25 @@ impl RemoteClient {
 
     fn get_chunk(&self, chunk_uuid: &Uuid) -> Result<TxPart> {
         let https = HttpsConnector::new();
-        let client = Client::builder().build::<_, Body>(https);
+        let client: Client<_, Full<Bytes>> = Client::builder(TokioExecutor::new()).build(https);
 
         d(&"client".to_string());
 
         let uri = format!("{}/chunks/{}", self.bound_base_uri(), chunk_uuid);
-        let uri = uri.parse()?;
+        let uri: hyper::Uri = uri.parse()?;
 
         d(&format!("GET {:?}", uri));
 
         let work = async {
-            let res = client.get(uri).await.unwrap(); // TODO use '?' fix From hyper::Error to MentatError;
+            let req = Request::builder()
+                .method(Method::GET)
+                .uri(uri)
+                .body(Full::new(Bytes::new()))
+                .unwrap();
+            let res = client.request(req).await.unwrap(); // TODO use '?' fix From hyper::Error to MentatError;
             dbg!("response.status: {}", res.status());
 
-            let body_bytes = body::to_bytes(res.into_body()).await.unwrap(); // TODO use '?' fix From hyper::Error to MentatError;
+            let body_bytes = res.into_body().collect().await.unwrap().to_bytes(); // TODO use '?' fix From hyper::Error to MentatError;
             let body =
                 String::from_utf8(body_bytes.to_vec()).expect("response was not valid utf-8");
             let json: TxPart = serde_json::from_str(&body)

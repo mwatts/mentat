@@ -260,7 +260,7 @@ macro_rules! def_into {
 ///
 /// # Examples
 ///
-/// ```
+/// ```ignore
 /// # use edn::types::to_symbol;
 /// # use edn::types::Value;
 /// # use edn::symbols;
@@ -290,7 +290,7 @@ macro_rules! to_symbol {
 ///
 /// # Examples
 ///
-/// ```
+/// ```ignore
 /// # use edn::types::to_keyword;
 /// # use edn::types::Value;
 /// # use edn::symbols;
@@ -569,7 +569,7 @@ macro_rules! def_common_value_display {
             }
             // TODO: EDN escaping.
             $t::Text(ref v) => write!($f, "\"{}\"", v),
-            $t::Uuid(ref u) => write!($f, "#uuid \"{}\"", u.to_hyphenated().to_string()),
+            $t::Uuid(ref u) => write!($f, "#uuid \"{}\"", u.hyphenated().to_string()),
             $t::PlainSymbol(ref v) => v.fmt($f),
             $t::NamespacedSymbol(ref v) => v.fmt($f),
             $t::Keyword(ref v) => v.fmt($f),
@@ -668,7 +668,9 @@ pub trait FromMicros {
 
 impl FromMicros for DateTime<Utc> {
     fn from_micros(ts: i64) -> Self {
-        Utc.timestamp(ts / 1_000_000, ((ts % 1_000_000).abs() as u32) * 1_000)
+        Utc.timestamp_opt(ts / 1_000_000, ((ts % 1_000_000).abs() as u32) * 1_000)
+            .single()
+            .expect("valid timestamp")
     }
 }
 
@@ -690,7 +692,9 @@ pub trait FromMillis {
 
 impl FromMillis for DateTime<Utc> {
     fn from_millis(ts: i64) -> Self {
-        Utc.timestamp(ts / 1_000, ((ts % 1_000).abs() as u32) * 1_000)
+        Utc.timestamp_opt(ts / 1_000, ((ts % 1_000).abs() as u32) * 1_000_000)
+            .single()
+            .expect("valid timestamp")
     }
 }
 

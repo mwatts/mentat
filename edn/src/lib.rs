@@ -154,7 +154,7 @@ peg::parser!(pub grammar parse() for str {
             let micros = d.parse::<i64>().unwrap();
             let seconds: i64 = micros / 1_000_000;
             let nanos: u32 = ((micros % 1_000_000).abs() as u32) * 1000;
-            Utc.timestamp(seconds, nanos)
+            Utc.timestamp_opt(seconds, nanos).single().expect("valid timestamp")
         }
 
     rule inst_millis() -> DateTime<Utc> =
@@ -162,7 +162,7 @@ peg::parser!(pub grammar parse() for str {
             let millis = d.parse::<i64>().unwrap();
             let seconds: i64 = millis / 1000;
             let nanos: u32 = ((millis % 1000).abs() as u32) * 1_000_000;
-            Utc.timestamp(seconds, nanos)
+            Utc.timestamp_opt(seconds, nanos).single().expect("valid timestamp")
         }
 
     rule inst() -> SpannedValue = t:(inst_millis() / inst_micros() / inst_string())

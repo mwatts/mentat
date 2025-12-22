@@ -15,16 +15,16 @@ syncable = ["tolstoy_traits", "hyper", "serde_json"]
 [dependencies]
 failure = "~0.1"
 failure_derive = "~0.1"
-http = "~0.2"
-tokio = { version = "1.8.0", features = ["full"] }
-uuid = "~0.8"
+http = "~1.4"
+tokio = { version = "1.48.0", features = ["full"] }
+uuid = "~1.19"
 
 [dependencies.rusqlite]
-version = "~0.26"
+version = "~0.38"
 features = ["limits", "bundled"]
 
 [dependencies.hyper]
-version = "~0.14"
+version = "~1.8"
 optional = true
 
 [dependencies.serde_json]
