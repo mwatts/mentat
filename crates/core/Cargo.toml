@@ -1,0 +1,19 @@
+[package]
+name = "mentat_core"
+version = "0.0.2"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+chrono.workspace = true
+enum-set.workspace = true
+failure.workspace = true
+indexmap.workspace = true
+ordered-float.workspace = true
+uuid.workspace = true
+core_traits.workspace = true
+
+[dependencies.edn]
+workspace = true
+features = ["serde_support"]

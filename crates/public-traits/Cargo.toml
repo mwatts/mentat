@@ -1,0 +1,30 @@
+[package]
+name = "public_traits"
+version = "0.0.2"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[lib]
+path = "lib.rs"
+
+[features]
+syncable = ["tolstoy_traits", "hyper", "http", "serde_json"]
+
+[dependencies]
+failure.workspace = true
+failure_derive.workspace = true
+rusqlite.workspace = true
+uuid.workspace = true
+edn.workspace = true
+core_traits.workspace = true
+mentat_core.workspace = true
+db_traits.workspace = true
+query_algebrizer_traits.workspace = true
+query_projector_traits.workspace = true
+query_pull_traits.workspace = true
+sql_traits.workspace = true
+tolstoy_traits = { workspace = true, optional = true }
+hyper = { workspace = true, optional = true }
+http = { workspace = true, optional = true }
+serde_json = { workspace = true, optional = true }

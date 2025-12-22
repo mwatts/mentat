@@ -1,116 +1,99 @@
-[package]
-edition = "2021"
-authors = [
-  "Richard Newman <rnewman@twinql.com>",
-  "Nicholas Alexander <nalexander@mozilla.com>",
-  "Victor Porof <vporof@mozilla.com>",
-  "Jordan Santell <jsantell@mozilla.com>",
-  "Joe Walker <jwalker@mozilla.com>",
-  "Emily Toop <etoop@mozilla.com>",
-  "Grisha Kruglov <grigory@kruglov.ca>",
-  "Kit Cambridge <kit@yakshaving.ninja>",
-  "Edouard Oger <eoger@fastmail.com>",
-  "Thom Chiovoloni <tchiovoloni@mozilla.com>",
-  "Gregory Burd <greg@burd.me>",
-]
-name = "mentat"
-version = "0.13.0"
-build = "build/version.rs"
-
-[features]
-default = ["bundled_sqlite3", "syncable"]
-bundled_sqlite3 = ["rusqlite/bundled"]
-sqlcipher = ["rusqlite/sqlcipher", "mentat_db/sqlcipher"]
-syncable = ["mentat_tolstoy", "tolstoy_traits", "mentat_db/syncable"]
-
 [workspace]
+resolver = "2"
 members = [
-  "tools/cli",
-  "ffi", "core", "core-traits","db", "db-traits", "edn", "public-traits", "query-algebrizer",
-  "query-algebrizer-traits", "query-projector", "query-projector-traits","query-pull",
-  "query-sql", "sql", "sql-traits", "tolstoy-traits", "tolstoy", "transaction"
-  ]
+    "crates/mentat",
+    "crates/core",
+    "crates/core-traits",
+    "crates/db",
+    "crates/db-traits",
+    "crates/edn",
+    "crates/ffi",
+    "crates/public-traits",
+    "crates/query-algebrizer",
+    "crates/query-algebrizer-traits",
+    "crates/query-projector",
+    "crates/query-projector-traits",
+    "crates/query-pull",
+    "crates/query-pull-traits",
+    "crates/query-sql",
+    "crates/sql",
+    "crates/sql-traits",
+    "crates/tolstoy",
+    "crates/tolstoy-traits",
+    "crates/transaction",
+    "crates/tools/cli",
+]
 
-[build-dependencies]
-rustc_version = "~0.4"
+[workspace.package]
+edition = "2021"
+license = "Apache-2.0"
+repository = "https://github.com/mozilla/mentat"
 
-[dev-dependencies]
+[workspace.dependencies]
+# Internal crates
+mentat = { path = "crates/mentat", default-features = false }
+mentat_core = { path = "crates/core" }
+core_traits = { path = "crates/core-traits" }
+mentat_db = { path = "crates/db" }
+db_traits = { path = "crates/db-traits" }
+edn = { path = "crates/edn" }
+mentat_ffi = { path = "crates/ffi" }
+public_traits = { path = "crates/public-traits" }
+mentat_query_algebrizer = { path = "crates/query-algebrizer" }
+query_algebrizer_traits = { path = "crates/query-algebrizer-traits" }
+mentat_query_projector = { path = "crates/query-projector" }
+query_projector_traits = { path = "crates/query-projector-traits" }
+mentat_query_pull = { path = "crates/query-pull" }
+query_pull_traits = { path = "crates/query-pull-traits" }
+mentat_query_sql = { path = "crates/query-sql" }
+mentat_sql = { path = "crates/sql" }
+sql_traits = { path = "crates/sql-traits" }
+mentat_tolstoy = { path = "crates/tolstoy" }
+tolstoy_traits = { path = "crates/tolstoy-traits" }
+mentat_transaction = { path = "crates/transaction" }
+mentat_cli = { path = "crates/tools/cli" }
+
+# External dependencies
 assert_approx_eq = "~1.1"
-
-#[dev-dependencies.cargo-husky]
-#version = "1"
-#default-features = false # Disable features which are enabled by default
-#features = ["run-for-all", "precommit-hook", "run-cargo-fmt", "run-cargo-test", "run-cargo-check", "run-cargo-clippy"]
-#cargo audit
-#cargo outdated
-
-[dependencies]
-chrono = "~0.4"
+bytes = { version = "1.11.0", features = ["serde"] }
+chrono = { version = "~0.4", features = ["serde"] }
+combine = "~4.6"
+dirs = "~6.0"
+enum-set = "~0.0"
+env_logger = "~0.11"
 failure = "~0.1"
+failure_derive = "~0.1"
+futures = "~0.3"
+getopts = "~0.2"
+hex = "0.4.3"
+http = "~1.4"
+http-body-util = "~0.1"
+hyper = { version = "~1.8", features = ["full"] }
+hyper-tls = "~0.6"
+hyper-util = { version = "~0.1", features = ["client-legacy", "http1", "tokio"] }
+indexmap = "~2.12"
+itertools = "~0.14"
 lazy_static = "~1.5"
-time = "0.3.44"
+linefeed = "~0.6"
 log = "~0.4"
+mime = "~0.3"
+num = "~0.4"
+ordered-float = { version = "~5.1", features = ["serde"] }
+peg = "~0.8"
+petgraph = "~0.8"
+pretty = "~0.12"
+rusqlite = { version = "~0.38", features = ["limits", "bundled"] }
+serde = { version = "~1.0", features = ["derive", "rc"] }
+serde_cbor = "~0.11"
+serde_derive = "~1.0"
+serde_json = "~1.0"
+serde_test = "~1.0"
+tabwriter = "~1.4"
+tempfile = "~3.23"
+termion = "~4.0"
+time = "~0.3"
+tokio = { version = "1.48.0", features = ["full"] }
 uuid = { version = "~1.19", features = ["v4", "serde"] }
-
-[dependencies.rusqlite]
-version = "~0.38"
-features = ["limits", "bundled"]
-
-[dependencies.edn]
-path = "edn"
-
-[dependencies.core_traits]
-path = "core-traits"
-
-[dependencies.mentat_core]
-path = "core"
-
-[dependencies.mentat_sql]
-path = "sql"
-
-[dependencies.mentat_db]
-path = "db"
-
-[dependencies.db_traits]
-path = "db-traits"
-
-[dependencies.mentat_query_algebrizer]
-path = "query-algebrizer"
-
-[dependencies.query_algebrizer_traits]
-path = "query-algebrizer-traits"
-
-[dependencies.mentat_query_projector]
-path = "query-projector"
-
-[dependencies.query_projector_traits]
-path = "query-projector-traits"
-
-[dependencies.mentat_query_pull]
-path = "query-pull"
-
-[dependencies.query_pull_traits]
-path = "query-pull-traits"
-
-[dependencies.mentat_query_sql]
-path = "query-sql"
-
-[dependencies.sql_traits]
-path = "sql-traits"
-
-[dependencies.public_traits]
-path = "public-traits"
-
-[dependencies.mentat_transaction]
-path = "transaction"
-
-[dependencies.mentat_tolstoy]
-path = "tolstoy"
-optional = true
-
-[dependencies.tolstoy_traits]
-path = "tolstoy-traits"
-optional = true
 
 [profile.release]
 opt-level = 3

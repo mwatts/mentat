@@ -1,0 +1,59 @@
+[package]
+name = "mentat"
+version = "0.13.0"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+authors = [
+    "Richard Newman <rnewman@twinql.com>",
+    "Nicholas Alexander <nalexander@mozilla.com>",
+    "Victor Porof <vporof@mozilla.com>",
+    "Jordan Santell <jsantell@mozilla.com>",
+    "Joe Walker <jwalker@mozilla.com>",
+    "Emily Toop <etoop@mozilla.com>",
+    "Grisha Kruglov <grigory@kruglov.ca>",
+    "Kit Cambridge <kit@yakshaving.ninja>",
+    "Edouard Oger <eoger@fastmail.com>",
+    "Thom Chiovoloni <tchiovoloni@mozilla.com>",
+    "Gregory Burd <greg@burd.me>",
+]
+build = "build/version.rs"
+
+[features]
+default = ["bundled_sqlite3", "syncable"]
+bundled_sqlite3 = ["rusqlite/bundled"]
+sqlcipher = ["rusqlite/sqlcipher", "mentat_db/sqlcipher"]
+syncable = ["mentat_tolstoy", "tolstoy_traits", "mentat_db/syncable"]
+
+[build-dependencies]
+rustc_version = "~0.4"
+
+[dev-dependencies]
+assert_approx_eq.workspace = true
+
+[dependencies]
+chrono.workspace = true
+failure.workspace = true
+lazy_static.workspace = true
+time.workspace = true
+log.workspace = true
+uuid.workspace = true
+rusqlite.workspace = true
+edn.workspace = true
+core_traits.workspace = true
+mentat_core.workspace = true
+mentat_sql.workspace = true
+mentat_db.workspace = true
+db_traits.workspace = true
+mentat_query_algebrizer.workspace = true
+query_algebrizer_traits.workspace = true
+mentat_query_projector.workspace = true
+query_projector_traits.workspace = true
+mentat_query_pull.workspace = true
+query_pull_traits.workspace = true
+mentat_query_sql.workspace = true
+sql_traits.workspace = true
+public_traits.workspace = true
+mentat_transaction.workspace = true
+mentat_tolstoy = { workspace = true, optional = true }
+tolstoy_traits = { workspace = true, optional = true }

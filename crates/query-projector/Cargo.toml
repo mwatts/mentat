@@ -1,0 +1,22 @@
+[package]
+name = "mentat_query_projector"
+version = "0.0.2"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+failure.workspace = true
+indexmap.workspace = true
+rusqlite.workspace = true
+edn.workspace = true
+mentat_core.workspace = true
+core_traits.workspace = true
+db_traits.workspace = true
+mentat_db.workspace = true
+mentat_query_algebrizer.workspace = true
+mentat_query_pull.workspace = true
+mentat_query_sql.workspace = true
+mentat_sql.workspace = true
+query_projector_traits.workspace = true
+query_pull_traits.workspace = true

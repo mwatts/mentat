@@ -1,0 +1,46 @@
+[package]
+name = "mentat_cli"
+version = "0.0.2"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[features]
+default = ["bundled_sqlite3", "syncable"]
+sqlcipher = ["mentat/sqlcipher"]
+bundled_sqlite3 = ["mentat/bundled_sqlite3"]
+syncable = ["mentat/syncable"]
+
+[lib]
+name = "mentat_cli"
+path = "src/mentat_cli/lib.rs"
+
+[[bin]]
+name = "mentat_cli"
+doc = false
+test = false
+
+[dependencies]
+combine.workspace = true
+dirs.workspace = true
+env_logger.workspace = true
+failure.workspace = true
+failure_derive.workspace = true
+getopts.workspace = true
+lazy_static.workspace = true
+linefeed.workspace = true
+log.workspace = true
+tabwriter.workspace = true
+tempfile.workspace = true
+termion.workspace = true
+time.workspace = true
+bytes.workspace = true
+hex.workspace = true
+rusqlite.workspace = true
+core_traits.workspace = true
+edn.workspace = true
+mentat_db.workspace = true
+
+[dependencies.mentat]
+workspace = true
+default-features = false

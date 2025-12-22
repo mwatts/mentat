@@ -1,0 +1,13 @@
+[package]
+name = "mentat_query_algebrizer"
+version = "0.0.2"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+failure.workspace = true
+edn.workspace = true
+mentat_core.workspace = true
+core_traits.workspace = true
+query_algebrizer_traits.workspace = true

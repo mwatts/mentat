@@ -1,0 +1,40 @@
+[package]
+name = "mentat_tolstoy"
+version = "0.0.2"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+authors = ["Grisha Kruglov <gkruglov@mozilla.com>"]
+
+[features]
+sqlcipher = ["rusqlite/sqlcipher"]
+
+[dependencies]
+failure.workspace = true
+futures.workspace = true
+hyper.workspace = true
+hyper-tls.workspace = true
+hyper-util.workspace = true
+http-body-util.workspace = true
+http.workspace = true
+log.workspace = true
+mime.workspace = true
+tokio.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+serde_cbor.workspace = true
+serde_derive.workspace = true
+lazy_static.workspace = true
+uuid.workspace = true
+rusqlite.workspace = true
+edn.workspace = true
+mentat_core.workspace = true
+core_traits.workspace = true
+db_traits.workspace = true
+tolstoy_traits.workspace = true
+public_traits = { workspace = true, features = ["syncable"] }
+mentat_transaction.workspace = true
+
+[dependencies.mentat_db]
+workspace = true
+features = ["syncable"]

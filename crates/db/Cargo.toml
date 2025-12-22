@@ -1,0 +1,34 @@
+[package]
+name = "mentat_db"
+version = "0.0.2"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[features]
+default = []
+sqlcipher = ["rusqlite/sqlcipher"]
+syncable = ["serde", "serde_json", "serde_derive"]
+
+[dependencies]
+failure.workspace = true
+indexmap.workspace = true
+itertools.workspace = true
+lazy_static.workspace = true
+log.workspace = true
+ordered-float.workspace = true
+time.workspace = true
+petgraph.workspace = true
+rusqlite.workspace = true
+edn.workspace = true
+mentat_core.workspace = true
+core_traits.workspace = true
+db_traits.workspace = true
+mentat_sql.workspace = true
+tabwriter.workspace = true
+serde = { workspace = true, optional = true }
+serde_json = { workspace = true, optional = true }
+serde_derive = { workspace = true, optional = true }
+
+[dev-dependencies]
+env_logger.workspace = true

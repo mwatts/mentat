@@ -1,0 +1,19 @@
+[package]
+name = "tolstoy_traits"
+version = "0.0.2"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[lib]
+path = "lib.rs"
+
+[dependencies]
+failure.workspace = true
+failure_derive.workspace = true
+hyper.workspace = true
+http.workspace = true
+rusqlite.workspace = true
+serde_json.workspace = true
+uuid.workspace = true
+db_traits.workspace = true

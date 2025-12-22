@@ -1,0 +1,29 @@
+[package]
+name = "edn"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+authors = ["Joe Walker <jwalker@mozilla.com>"]
+description = "EDN parser for Project Mentat"
+readme = "./README.md"
+
+[features]
+serde_support = ["serde", "serde_derive"]
+
+[dependencies]
+chrono.workspace = true
+itertools.workspace = true
+num.workspace = true
+ordered-float.workspace = true
+pretty.workspace = true
+uuid.workspace = true
+peg.workspace = true
+bytes.workspace = true
+hex.workspace = true
+serde = { workspace = true, optional = true }
+serde_derive = { workspace = true, optional = true }
+
+[dev-dependencies]
+serde_test.workspace = true
+serde_json.workspace = true

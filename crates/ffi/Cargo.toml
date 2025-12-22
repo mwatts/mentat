@@ -1,0 +1,24 @@
+[package]
+name = "mentat_ffi"
+version = "0.0.2"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[lib]
+name = "mentat_ffi"
+crate-type = ["lib", "staticlib", "cdylib"]
+
+[features]
+default = ["bundled_sqlite3"]
+bundled_sqlite3 = ["mentat/bundled_sqlite3"]
+sqlcipher = ["mentat/sqlcipher"]
+
+[dependencies]
+libc = "0.2"
+mentat.workspace = true
+edn.workspace = true
+core_traits.workspace = true
+mentat_core.workspace = true
+mentat_db.workspace = true
+public_traits.workspace = true

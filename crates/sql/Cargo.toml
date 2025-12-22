@@ -1,0 +1,14 @@
+[package]
+name = "mentat_sql"
+version = "0.0.2"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+failure.workspace = true
+ordered-float.workspace = true
+rusqlite.workspace = true
+sql_traits.workspace = true
+core_traits.workspace = true
+mentat_core.workspace = true
