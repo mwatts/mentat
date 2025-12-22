@@ -53,36 +53,69 @@ lazy_static! {
     static ref HELP_COMMANDS: Vec<(&'static str, &'static str)> = {
         vec![
             (COMMAND_HELP, "Show this message."),
-
-            (COMMAND_EXIT_LONG, "Close the current database and exit the REPL."),
-            (COMMAND_EXIT_SHORT, "Shortcut for `.exit`. Close the current database and exit the REPL."),
-
+            (
+                COMMAND_EXIT_LONG,
+                "Close the current database and exit the REPL.",
+            ),
+            (
+                COMMAND_EXIT_SHORT,
+                "Shortcut for `.exit`. Close the current database and exit the REPL.",
+            ),
             (COMMAND_OPEN, "Open a database at path."),
-
             #[cfg(feature = "sqlcipher")]
-            (COMMAND_OPEN_ENCRYPTED, "Open an encrypted database at path using the provided key."),
-
-            (COMMAND_SCHEMA, "Output the schema for the current open database."),
-
-            (COMMAND_IMPORT_LONG, "Transact the contents of a file against the current open database."),
-
-            (COMMAND_QUERY_LONG, "Execute a query against the current open database."),
-            (COMMAND_QUERY_SHORT, "Shortcut for `.query`. Execute a query against the current open database."),
-
-            (COMMAND_QUERY_PREPARED_LONG, "Prepare a query against the current open database, then run it, timed."),
-
-            (COMMAND_TRANSACT_LONG, "Execute a transact against the current open database."),
-            (COMMAND_TRANSACT_SHORT, "Shortcut for `.transact`. Execute a transact against the current open database."),
-
-            (COMMAND_QUERY_EXPLAIN_LONG, "Show the SQL and query plan that would be executed for a given query."),
-            (COMMAND_QUERY_EXPLAIN_SHORT, "Shortcut for `.explain_query`. Show the SQL and query plan that would be executed for a given query."),
-
-            (COMMAND_TIMER_LONG, "Enable or disable timing of query and transact operations."),
-
-            (COMMAND_CACHE, "Cache an attribute. Usage: `.cache :foo/bar reverse`"),
-
+            (
+                COMMAND_OPEN_ENCRYPTED,
+                "Open an encrypted database at path using the provided key.",
+            ),
+            (
+                COMMAND_SCHEMA,
+                "Output the schema for the current open database.",
+            ),
+            (
+                COMMAND_IMPORT_LONG,
+                "Transact the contents of a file against the current open database.",
+            ),
+            (
+                COMMAND_QUERY_LONG,
+                "Execute a query against the current open database.",
+            ),
+            (
+                COMMAND_QUERY_SHORT,
+                "Shortcut for `.query`. Execute a query against the current open database.",
+            ),
+            (
+                COMMAND_QUERY_PREPARED_LONG,
+                "Prepare a query against the current open database, then run it, timed.",
+            ),
+            (
+                COMMAND_TRANSACT_LONG,
+                "Execute a transact against the current open database.",
+            ),
+            (
+                COMMAND_TRANSACT_SHORT,
+                "Shortcut for `.transact`. Execute a transact against the current open database.",
+            ),
+            (
+                COMMAND_QUERY_EXPLAIN_LONG,
+                "Show the SQL and query plan that would be executed for a given query.",
+            ),
+            (
+                COMMAND_QUERY_EXPLAIN_SHORT,
+                "Shortcut for `.explain_query`. Show the SQL and query plan that would be executed for a given query.",
+            ),
+            (
+                COMMAND_TIMER_LONG,
+                "Enable or disable timing of query and transact operations.",
+            ),
+            (
+                COMMAND_CACHE,
+                "Cache an attribute. Usage: `.cache :foo/bar reverse`",
+            ),
             #[cfg(feature = "syncable")]
-            (COMMAND_SYNC, "Synchronize the database against a Mentat Sync Server URL for a provided user UUID."),
+            (
+                COMMAND_SYNC,
+                "Synchronize the database against a Mentat Sync Server URL for a provided user UUID.",
+            ),
         ]
     };
 }
@@ -375,7 +408,7 @@ impl Repl {
                     return Err(::mentat::MentatError::RusqliteError(
                         ".open_encrypted requires the sqlcipher Mentat feature".into(),
                         "".into(),
-                    ))
+                    ));
                 }
                 #[cfg(feature = "sqlcipher")]
                 Some(k) => Store::open_with_key(path.as_str(), k)?,
@@ -561,9 +594,9 @@ impl Repl {
     fn binding_as_string(&self, value: &Binding) -> String {
         use self::Binding::*;
         match value {
-            Scalar(ref v) => self.value_as_string(v),
-            Map(ref v) => self.map_as_string(v),
-            Vec(ref v) => self.vec_as_string(v),
+            Scalar(v) => self.value_as_string(v),
+            Map(v) => self.map_as_string(v),
+            Vec(v) => self.vec_as_string(v),
         }
     }
 
@@ -603,12 +636,12 @@ impl Repl {
                 }
             }
             Double(d) => format!("{}", d),
-            Instant(ref i) => format!("{}", i),
-            Keyword(ref k) => format!("{}", k),
+            Instant(i) => format!("{}", i),
+            Keyword(k) => format!("{}", k),
             Long(l) => format!("{}", l),
             Ref(r) => format!("{}", r),
-            String(ref s) => format!("{:?}", s.to_string()),
-            Uuid(ref u) => format!("{}", u),
+            String(s) => format!("{:?}", s.to_string()),
+            Uuid(u) => format!("{}", u),
             Bytes(b) => format!("#bytes {:?}", b.to_vec()),
         }
     }

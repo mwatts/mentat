@@ -18,7 +18,7 @@ use core_traits::{Binding, Entid, KnownEntid, TypedValue};
 use mentat_core::{HasSchema, Schema};
 
 use mentat_query_algebrizer::{
-    algebrize_with_inputs, parse_find_string, AlgebraicQuery, EmptyBecause, FindQuery,
+    AlgebraicQuery, EmptyBecause, FindQuery, algebrize_with_inputs, parse_find_string,
 };
 
 pub use mentat_query_algebrizer::QueryInputs;
@@ -31,7 +31,7 @@ use edn::query::{
 
 use mentat_query_projector::{ConstantProjector, Projector};
 
-use mentat_query_projector::translate::{query_to_select, ProjectedSelect};
+use mentat_query_projector::translate::{ProjectedSelect, query_to_select};
 
 use mentat_sql::SQLQuery;
 
@@ -70,16 +70,16 @@ impl<'sqlite> PreparedQuery<'sqlite> {
         T: Into<Option<QueryInputs>>,
     {
         match self {
-            PreparedQuery::Empty { ref find_spec } => Ok(QueryOutput::empty(find_spec)),
-            PreparedQuery::Constant { ref select } => {
+            PreparedQuery::Empty { find_spec } => Ok(QueryOutput::empty(find_spec)),
+            PreparedQuery::Constant { select } => {
                 select.project_without_rows().map_err(|e| e.into())
             }
             PreparedQuery::Bound {
-                ref mut statement,
-                ref schema,
-                ref connection,
-                ref args,
-                ref projector,
+                statement,
+                schema,
+                connection,
+                args,
+                projector,
             } => {
                 let rows = run_statement(statement, args)?;
                 projector

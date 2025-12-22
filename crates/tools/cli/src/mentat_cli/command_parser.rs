@@ -10,7 +10,7 @@
 
 use combine::parser::char::{space, spaces, string};
 use combine::parser::combinator::attempt;
-use combine::{any, choice, eof, look_ahead, many1, satisfy, sep_end_by, token, Parser};
+use combine::{Parser, any, choice, eof, look_ahead, many1, satisfy, sep_end_by, token};
 
 use crate::CliError;
 
@@ -66,65 +66,65 @@ impl Command {
     /// TODO: for query and transact commands, they will be considered complete if a parsable EDN has been entered as an argument
     pub fn is_complete(&self) -> bool {
         match self {
-            &Command::Query(ref args)
-            | &Command::QueryExplain(ref args)
-            | &Command::QueryPrepared(ref args)
-            | &Command::Transact(ref args) => edn::parse::value(&args).is_ok(),
-            &Command::Cache(_, _)
-            | &Command::Close
-            | &Command::Exit
-            | &Command::Help(_)
-            | &Command::Import(_)
-            | &Command::Open(_)
-            | &Command::OpenEncrypted(_, _)
-            | &Command::Timer(_)
-            | &Command::Schema
-            | &Command::Sync(_) => true,
+            Command::Query(args)
+            | Command::QueryExplain(args)
+            | Command::QueryPrepared(args)
+            | Command::Transact(args) => edn::parse::value(args).is_ok(),
+            Command::Cache(_, _)
+            | Command::Close
+            | Command::Exit
+            | Command::Help(_)
+            | Command::Import(_)
+            | Command::Open(_)
+            | Command::OpenEncrypted(_, _)
+            | Command::Timer(_)
+            | Command::Schema
+            | Command::Sync(_) => true,
         }
     }
 
     pub fn is_timed(&self) -> bool {
         match self {
-            &Command::Import(_)
-            | &Command::Query(_)
-            | &Command::QueryPrepared(_)
-            | &Command::Transact(_) => true,
+            Command::Import(_)
+            | Command::Query(_)
+            | Command::QueryPrepared(_)
+            | Command::Transact(_) => true,
 
-            &Command::Cache(_, _)
-            | &Command::Close
-            | &Command::Exit
-            | &Command::Help(_)
-            | &Command::Open(_)
-            | &Command::OpenEncrypted(_, _)
-            | &Command::QueryExplain(_)
-            | &Command::Timer(_)
-            | &Command::Schema
-            | &Command::Sync(_) => false,
+            Command::Cache(_, _)
+            | Command::Close
+            | Command::Exit
+            | Command::Help(_)
+            | Command::Open(_)
+            | Command::OpenEncrypted(_, _)
+            | Command::QueryExplain(_)
+            | Command::Timer(_)
+            | Command::Schema
+            | Command::Sync(_) => false,
         }
     }
 
     pub fn output(&self) -> String {
         match self {
-            Command::Cache(ref attr, ref direction) => {
+            Command::Cache(attr, direction) => {
                 format!(".{} {} {:?}", COMMAND_CACHE, attr, direction)
             }
             Command::Close => format!(".{}", COMMAND_CLOSE),
             Command::Exit => format!(".{}", COMMAND_EXIT_LONG),
-            Command::Help(ref args) => format!(".{} {:?}", COMMAND_HELP, args),
-            Command::Import(ref args) => format!(".{} {}", COMMAND_IMPORT_LONG, args),
-            Command::Open(ref args) => format!(".{} {}", COMMAND_OPEN, args),
-            Command::OpenEncrypted(ref db, ref key) => {
+            Command::Help(args) => format!(".{} {:?}", COMMAND_HELP, args),
+            Command::Import(args) => format!(".{} {}", COMMAND_IMPORT_LONG, args),
+            Command::Open(args) => format!(".{} {}", COMMAND_OPEN, args),
+            Command::OpenEncrypted(db, key) => {
                 format!(".{} {} {}", COMMAND_OPEN_ENCRYPTED, db, key)
             }
-            Command::Query(ref args) => format!(".{} {}", COMMAND_QUERY_LONG, args),
-            Command::QueryExplain(ref args) => format!(".{} {}", COMMAND_QUERY_EXPLAIN_LONG, args),
-            Command::QueryPrepared(ref args) => {
+            Command::Query(args) => format!(".{} {}", COMMAND_QUERY_LONG, args),
+            Command::QueryExplain(args) => format!(".{} {}", COMMAND_QUERY_EXPLAIN_LONG, args),
+            Command::QueryPrepared(args) => {
                 format!(".{} {}", COMMAND_QUERY_PREPARED_LONG, args)
             }
             Command::Schema => format!(".{}", COMMAND_SCHEMA),
-            Command::Sync(ref args) => format!(".{} {:?}", COMMAND_SYNC, args),
+            Command::Sync(args) => format!(".{} {:?}", COMMAND_SYNC, args),
             Command::Timer(on) => format!(".{} {}", COMMAND_TIMER_LONG, on),
-            Command::Transact(ref args) => format!(".{} {}", COMMAND_TRANSACT_LONG, args),
+            Command::Transact(args) => format!(".{} {}", COMMAND_TRANSACT_LONG, args),
         }
     }
 }

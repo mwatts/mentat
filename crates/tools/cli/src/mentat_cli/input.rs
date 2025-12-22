@@ -8,7 +8,7 @@
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
 
-use std::io::{stdin, stdout, Write};
+use std::io::{Write, stdin, stdout};
 
 use linefeed::{DefaultTerminal, Interface, ReadResult, Signal};
 
@@ -16,7 +16,7 @@ use termion::color;
 
 use self::InputResult::*;
 
-use crate::command_parser::{command, Command};
+use crate::command_parser::{Command, command};
 
 use failure::Error;
 
@@ -130,11 +130,11 @@ impl InputReader {
         // Therefore, we add the newly read in line to the existing command args.
         // If there is no in process command, we parse the read in line as a new command.
         let cmd = match &self.in_process_cmd {
-            Some(Command::QueryPrepared(ref args)) => {
+            Some(Command::QueryPrepared(args)) => {
                 Ok(Command::QueryPrepared(args.clone() + "\n" + &line))
             }
-            Some(Command::Query(ref args)) => Ok(Command::Query(args.clone() + "\n" + &line)),
-            Some(Command::Transact(ref args)) => Ok(Command::Transact(args.clone() + "\n" + &line)),
+            Some(Command::Query(args)) => Ok(Command::Query(args.clone() + "\n" + &line)),
+            Some(Command::Transact(args)) => Ok(Command::Transact(args.clone() + "\n" + &line)),
             _ => command(&self.buffer),
         };
 
